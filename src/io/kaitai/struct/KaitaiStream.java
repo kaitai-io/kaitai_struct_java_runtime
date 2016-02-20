@@ -20,29 +20,63 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+/**
+ * This class provides abstraction over either file-based or memory-based streams (using
+ */
 public class KaitaiStream {
     private KaitaiSeekableStream st;
 
+    /**
+     * Initializes a stream, reading from a local file with specified fileName. Internally, RandomAccessFile would be
+     * used to allow seeking within the stream and reading arbitrary bytes.
+     * @param fileName file to read
+     * @throws FileNotFoundException
+     */
     public KaitaiStream(String fileName) throws FileNotFoundException {
         st = new RAFWrapper(fileName, "r");
     }
 
+    /**
+     * Initializes a stream that will get data from given byte array when read. Internally, ByteArrayInputStream will
+     * be used.
+     * @param arr byte array to read
+     */
     public KaitaiStream(byte[] arr) {
         st = new BAISWrapper(arr);
     }
 
+    /**
+     * Reports absolute position in the stream.
+     * @return current absolute position (in number of bytes from the beginning of the stream)
+     * @throws IOException
+     */
     public long pos() throws IOException {
         return st.pos();
     }
 
+    /**
+     * Seeks stream to given new position.
+     * @param newPos new absolute position (in number of bytes from the beginning of the stream)
+     * @throws IOException
+     */
     public void seek(long newPos) throws IOException {
         st.seek(newPos);
     }
 
+    /**
+     * Checks if we've reached end of stream, thus no more bytes can be read from it.
+     * @return true if we're at the end of stream, false otherwise
+     * @throws IOException
+     */
     public boolean isEof() throws IOException {
         return st.isEof();
     }
 
+    /**
+     * Reads one signed 1-byte integer, returning it properly as Java's "byte" type.
+     * @return 1-byte integer read from a stream
+     * @throws IOException
+     */
     public byte readS1() throws IOException {
         int t = st.read();
         if (t < 0) {
