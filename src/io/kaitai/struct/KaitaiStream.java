@@ -1,4 +1,4 @@
-package io.kaitai.structures;
+package io.kaitai.struct;
 
 import java.io.*;
 import java.nio.charset.Charset;
