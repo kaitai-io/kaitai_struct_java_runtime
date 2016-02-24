@@ -214,6 +214,24 @@ public class KaitaiStream {
         return buf;
     }
 
+    private static final int DEFAULT_BUFFER_SIZE = 4 * 1024;
+
+    /**
+     * Reads all the remaining bytes in a stream as byte array.
+     * @return all remaining bytes in a stream as byte array
+     * @throws IOException
+     */
+    public byte[] readBytesFull() throws IOException {
+        byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        int readCount = 0;
+        while (-1 != (readCount = st.read(buffer)))
+            baos.write(buffer, 0, readCount);
+
+        return baos.toByteArray();
+    }
+
     public byte[] ensureFixedContents(int len, byte[] expected) throws IOException {
         byte[] actual = readBytes(len);
         if (!Arrays.equals(actual, expected)) {
