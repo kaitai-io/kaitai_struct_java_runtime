@@ -243,7 +243,7 @@ public class KaitaiStream {
         return actual;
     }
 
-    public String readStrByteLimit(int len, String encoding) throws IOException {
+    public String readStrByteLimit(long len, String encoding) throws IOException {
         return new String(readBytes(len), Charset.forName(encoding));
     }
 
