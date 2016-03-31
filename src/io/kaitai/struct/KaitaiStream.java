@@ -19,6 +19,8 @@ package io.kaitai.struct;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 /**
  * This class provides abstraction over either file-based or memory-based streams (using
@@ -267,6 +269,25 @@ public class KaitaiStream {
             }
             buf.write(c);
         }
+    }
+
+    private final static int ZLIB_BUF_SIZE = 4096;
+
+    public byte[] processZlib(byte[] data) throws IOException {
+        Inflater ifl = new Inflater();
+        ifl.setInput(data);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte buf[] = new byte[ZLIB_BUF_SIZE];
+        while (!ifl.finished()) {
+            try {
+                int decBytes = ifl.inflate(buf);
+                baos.write(buf, 0, decBytes);
+            } catch (DataFormatException e) {
+                throw new IOException(e);
+            }
+        }
+        ifl.end();
+        return baos.toByteArray();
     }
 
     private static String byteArrayToHex(byte[] arr) {
