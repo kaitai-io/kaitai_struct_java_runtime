@@ -273,6 +273,12 @@ public class KaitaiStream {
 
     private final static int ZLIB_BUF_SIZE = 4096;
 
+    /**
+     * Performs an unpacking ("inflation") of zlib-compressed data with usual zlib headers.
+     * @param data data to unpack
+     * @return unpacked data
+     * @throws IOException
+     */
     public byte[] processZlib(byte[] data) throws IOException {
         Inflater ifl = new Inflater();
         ifl.setInput(data);
@@ -288,6 +294,31 @@ public class KaitaiStream {
         }
         ifl.end();
         return baos.toByteArray();
+    }
+
+    /**
+     * Performs a circular left rotation shift for a given buffer by a given amount of bits,
+     * using groups of groupSize bytes each time. Right circular rotation should be performed
+     * using this procedure with corrected amount.
+     * @param data source data to process
+     * @param amount number of bits to shift by
+     * @param groupSize number of bytes per group to shift
+     * @return copy of source array with requested shift applied
+     */
+    public byte[] processRotateLeft(byte[] data, int amount, int groupSize) {
+        byte[] r = new byte[data.length];
+        switch (groupSize) {
+            case 1:
+                for (int i = 0; i < data.length; i++) {
+                    byte bits = data[i];
+                    // http://stackoverflow.com/a/19181827/487064
+                    r[i] = (byte) (((bits & 0xff) << amount) | ((bits & 0xff) >>> (8 - amount)));
+                }
+                break;
+            default:
+                throw new UnsupportedOperationException("unable to rotate group of " + groupSize + " bytes yet");
+        }
+        return r;
     }
 
     private static String byteArrayToHex(byte[] arr) {
