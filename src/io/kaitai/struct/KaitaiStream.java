@@ -275,6 +275,20 @@ public class KaitaiStream {
         }
     }
 
+    /**
+     * Performs a XOR processing with given data, XORing every byte of input with a single
+     * given value.
+     * @param data data to process
+     * @param value value to XOR with
+     * @return processed data
+     */
+    public byte[] processXorInt(byte[] data, int value) {
+        byte[] r = new byte[data.length];
+        for (int i = 0; i < data.length; i++)
+            r[i] = (byte) (data[i] ^ value);
+        return r;
+    }
+
     private final static int ZLIB_BUF_SIZE = 4096;
 
     /**
