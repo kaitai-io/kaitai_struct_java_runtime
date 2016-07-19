@@ -286,13 +286,35 @@ public class KaitaiStream {
      * Performs a XOR processing with given data, XORing every byte of input with a single
      * given value.
      * @param data data to process
-     * @param value value to XOR with
+     * @param key value to XOR with
      * @return processed data
      */
-    public byte[] processXorInt(byte[] data, int value) {
-        byte[] r = new byte[data.length];
-        for (int i = 0; i < data.length; i++)
-            r[i] = (byte) (data[i] ^ value);
+    public byte[] processXor(byte[] data, int key) {
+        int dataLen = data.length;
+        byte[] r = new byte[dataLen];
+        for (int i = 0; i < dataLen; i++)
+            r[i] = (byte) (data[i] ^ key);
+        return r;
+    }
+
+    /**
+     * Performs a XOR processing with given data, XORing every byte of input with a key
+     * array, repeating key array many times, if necessary (i.e. if data array is longer
+     * than key array).
+     * @param data data to process
+     * @param key array of bytes to XOR with
+     * @return processed data
+     */
+    public byte[] processXor(byte[] data, byte[] key) {
+        int dataLen = data.length;
+        int valueLen = key.length;
+
+        byte[] r = new byte[dataLen];
+        int j = 0;
+        for (int i = 0; i < dataLen; i++) {
+            r[i] = (byte) (data[i] ^ key[j]);
+            j = (j + 1) % valueLen;
+        }
         return r;
     }
 
