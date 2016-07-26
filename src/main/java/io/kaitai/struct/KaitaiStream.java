@@ -24,6 +24,8 @@
 package io.kaitai.struct;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.zip.DataFormatException;
@@ -79,6 +81,14 @@ public class KaitaiStream {
      */
     public boolean isEof() throws IOException {
         return st.isEof();
+    }
+
+    private ByteBuffer wrapBufferLe(int count) throws IOException {
+        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.LITTLE_ENDIAN);
+    }
+
+    private ByteBuffer wrapBufferBe(int count) throws IOException {
+        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.BIG_ENDIAN);
     }
 
     /**
@@ -210,6 +220,22 @@ public class KaitaiStream {
         long b1 = readU4be();
         long b2 = readU4be();
         return (b1 << 32) + (b2 << 0);
+    }
+
+    public float readF4le() throws IOException {
+        return wrapBufferLe(4).getFloat();
+    }
+
+    public double readF8le() throws IOException {
+        return wrapBufferLe(8).getDouble();
+    }
+
+    public float readF4be() throws IOException {
+        return wrapBufferBe(4).getFloat();
+    }
+
+    public double readF8be() throws IOException {
+        return wrapBufferBe(8).getDouble();
     }
 
     public byte[] readBytes(long n) throws IOException {
