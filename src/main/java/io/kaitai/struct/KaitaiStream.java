@@ -461,11 +461,11 @@ public class KaitaiStream {
     }
 
     interface KaitaiSeekableStream {
-        public long pos() throws IOException;;
-        public void seek(long l) throws IOException;
-        public int read() throws IOException;
-        public int read(byte[] buf) throws IOException;
-        public boolean isEof() throws IOException;
+        long pos() throws IOException;;
+        void seek(long l) throws IOException;
+        int read() throws IOException;
+        int read(byte[] buf) throws IOException;
+        boolean isEof() throws IOException;
     }
 
     static class BAISWrapper extends ByteArrayInputStream implements KaitaiSeekableStream {
