@@ -56,13 +56,15 @@ public class KaitaiStream {
         st = new BAISWrapper(arr);
     }
 
+    //region Stream positioning
+
     /**
-     * Reports absolute position in the stream.
-     * @return current absolute position (in number of bytes from the beginning of the stream)
+     * Checks if we've reached end of stream, thus no more bytes can be read from it.
+     * @return true if we're at the end of stream, false otherwise
      * @throws IOException
      */
-    public long pos() throws IOException {
-        return st.pos();
+    public boolean isEof() throws IOException {
+        return st.isEof();
     }
 
     /**
@@ -75,21 +77,19 @@ public class KaitaiStream {
     }
 
     /**
-     * Checks if we've reached end of stream, thus no more bytes can be read from it.
-     * @return true if we're at the end of stream, false otherwise
+     * Reports absolute position in the stream.
+     * @return current absolute position (in number of bytes from the beginning of the stream)
      * @throws IOException
      */
-    public boolean isEof() throws IOException {
-        return st.isEof();
+    public long pos() throws IOException {
+        return st.pos();
     }
 
-    private ByteBuffer wrapBufferLe(int count) throws IOException {
-        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.LITTLE_ENDIAN);
-    }
+    //endregion
 
-    private ByteBuffer wrapBufferBe(int count) throws IOException {
-        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.BIG_ENDIAN);
-    }
+    //region Integer numbers
+
+    //region Signed
 
     /**
      * Reads one signed 1-byte integer, returning it properly as Java's "byte" type.
@@ -105,44 +105,7 @@ public class KaitaiStream {
         }
     }
 
-    public int readU1() throws IOException {
-        int t = st.read();
-        if (t < 0) {
-            throw new EOFException();
-        } else {
-            return t;
-        }
-    }
-
-    public int readU2le() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        if ((b1 | b2) < 0) {
-            throw new EOFException();
-        } else {
-            return (b2 << 8) + (b1 << 0);
-        }
-    }
-
-    public int readU2be() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        if ((b1 | b2) < 0) {
-            throw new EOFException();
-        } else {
-            return (b1 << 8) + (b2 << 0);
-        }
-    }
-
-    public short readS2le() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        if ((b1 | b2) < 0) {
-            throw new EOFException();
-        } else {
-            return (short) ((b2 << 8) + (b1 << 0));
-        }
-    }
+    //region Big-endian
 
     public short readS2be() throws IOException {
         int b1 = st.read();
@@ -151,42 +114,6 @@ public class KaitaiStream {
             throw new EOFException();
         } else {
             return (short) ((b1 << 8) + (b2 << 0));
-        }
-    }
-
-    public long readU4le() throws IOException {
-        long b1 = st.read();
-        long b2 = st.read();
-        long b3 = st.read();
-        long b4 = st.read();
-        if ((b1 | b2 | b3 | b4) < 0) {
-            throw new EOFException();
-        } else {
-            return (b4 << 24) + (b3 << 16) + (b2 << 8) + (b1 << 0);
-        }
-    }
-
-    public long readU4be() throws IOException {
-        long b1 = st.read();
-        long b2 = st.read();
-        long b3 = st.read();
-        long b4 = st.read();
-        if ((b1 | b2 | b3 | b4) < 0) {
-            throw new EOFException();
-        } else {
-            return (b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0);
-        }
-    }
-
-    public int readS4le() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        int b3 = st.read();
-        int b4 = st.read();
-        if ((b1 | b2 | b3 | b4) < 0) {
-            throw new EOFException();
-        } else {
-            return (b4 << 24) + (b3 << 16) + (b2 << 8) + (b1 << 0);
         }
     }
 
@@ -202,12 +129,36 @@ public class KaitaiStream {
         }
     }
 
-    public long readU8le() throws IOException {
-        return readS8le();
+    public long readS8be() throws IOException {
+        long b1 = readU4be();
+        long b2 = readU4be();
+        return (b1 << 32) + (b2 << 0);
     }
 
-    public long readU8be() throws IOException {
-        return readS8be();
+    //endregion
+
+    //region Little-endian
+
+    public short readS2le() throws IOException {
+        int b1 = st.read();
+        int b2 = st.read();
+        if ((b1 | b2) < 0) {
+            throw new EOFException();
+        } else {
+            return (short) ((b2 << 8) + (b1 << 0));
+        }
+    }
+
+    public int readS4le() throws IOException {
+        int b1 = st.read();
+        int b2 = st.read();
+        int b3 = st.read();
+        int b4 = st.read();
+        if ((b1 | b2 | b3 | b4) < 0) {
+            throw new EOFException();
+        } else {
+            return (b4 << 24) + (b3 << 16) + (b2 << 8) + (b1 << 0);
+        }
     }
 
     public long readS8le() throws IOException {
@@ -216,11 +167,100 @@ public class KaitaiStream {
         return (b2 << 32) + (b1 << 0);
     }
 
-    public long readS8be() throws IOException {
-        long b1 = readU4be();
-        long b2 = readU4be();
-        return (b1 << 32) + (b2 << 0);
+    //endregion
+
+    //endregion
+
+    //region Unsigned
+
+    public int readU1() throws IOException {
+        int t = st.read();
+        if (t < 0) {
+            throw new EOFException();
+        } else {
+            return t;
+        }
     }
+
+    //region Big-endian
+
+    public int readU2be() throws IOException {
+        int b1 = st.read();
+        int b2 = st.read();
+        if ((b1 | b2) < 0) {
+            throw new EOFException();
+        } else {
+            return (b1 << 8) + (b2 << 0);
+        }
+    }
+
+    public long readU4be() throws IOException {
+        long b1 = st.read();
+        long b2 = st.read();
+        long b3 = st.read();
+        long b4 = st.read();
+        if ((b1 | b2 | b3 | b4) < 0) {
+            throw new EOFException();
+        } else {
+            return (b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0);
+        }
+    }
+
+    public long readU8be() throws IOException {
+        return readS8be();
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    public int readU2le() throws IOException {
+        int b1 = st.read();
+        int b2 = st.read();
+        if ((b1 | b2) < 0) {
+            throw new EOFException();
+        } else {
+            return (b2 << 8) + (b1 << 0);
+        }
+    }
+
+    public long readU4le() throws IOException {
+        long b1 = st.read();
+        long b2 = st.read();
+        long b3 = st.read();
+        long b4 = st.read();
+        if ((b1 | b2 | b3 | b4) < 0) {
+            throw new EOFException();
+        } else {
+            return (b4 << 24) + (b3 << 16) + (b2 << 8) + (b1 << 0);
+        }
+    }
+
+    public long readU8le() throws IOException {
+        return readS8le();
+    }
+
+    //endregion
+
+    //endregion
+
+    //endregion
+
+    //region Floating point numbers
+
+    //region Big-endian
+
+    public float readF4be() throws IOException {
+        return wrapBufferBe(4).getFloat();
+    }
+
+    public double readF8be() throws IOException {
+        return wrapBufferBe(8).getDouble();
+    }
+
+    //endregion
+
+    //region Little-endian
 
     public float readF4le() throws IOException {
         return wrapBufferLe(4).getFloat();
@@ -230,13 +270,11 @@ public class KaitaiStream {
         return wrapBufferLe(8).getDouble();
     }
 
-    public float readF4be() throws IOException {
-        return wrapBufferBe(4).getFloat();
-    }
+    //endregion
 
-    public double readF8be() throws IOException {
-        return wrapBufferBe(8).getDouble();
-    }
+    //endregion
+
+    //region Byte arrays
 
     public byte[] readBytes(long n) throws IOException {
         if (n > Integer.MAX_VALUE) {
@@ -278,6 +316,10 @@ public class KaitaiStream {
         return actual;
     }
 
+    //endregion
+
+    //region Strings
+
     public String readStrEos(String encoding) throws IOException {
         return new String(readBytesFull(), Charset.forName(encoding));
     }
@@ -307,6 +349,10 @@ public class KaitaiStream {
             buf.write(c);
         }
     }
+
+    //endregion
+
+    //region Byte array processing
 
     /**
      * Performs a XOR processing with given data, XORing every byte of input with a single
@@ -344,31 +390,6 @@ public class KaitaiStream {
         return r;
     }
 
-    private final static int ZLIB_BUF_SIZE = 4096;
-
-    /**
-     * Performs an unpacking ("inflation") of zlib-compressed data with usual zlib headers.
-     * @param data data to unpack
-     * @return unpacked data
-     * @throws IOException
-     */
-    public byte[] processZlib(byte[] data) throws IOException {
-        Inflater ifl = new Inflater();
-        ifl.setInput(data);
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte buf[] = new byte[ZLIB_BUF_SIZE];
-        while (!ifl.finished()) {
-            try {
-                int decBytes = ifl.inflate(buf);
-                baos.write(buf, 0, decBytes);
-            } catch (DataFormatException e) {
-                throw new IOException(e);
-            }
-        }
-        ifl.end();
-        return baos.toByteArray();
-    }
-
     /**
      * Performs a circular left rotation shift for a given buffer by a given amount of bits,
      * using groups of groupSize bytes each time. Right circular rotation should be performed
@@ -394,6 +415,33 @@ public class KaitaiStream {
         return r;
     }
 
+    private final static int ZLIB_BUF_SIZE = 4096;
+
+    /**
+     * Performs an unpacking ("inflation") of zlib-compressed data with usual zlib headers.
+     * @param data data to unpack
+     * @return unpacked data
+     * @throws IOException
+     */
+    public byte[] processZlib(byte[] data) throws IOException {
+        Inflater ifl = new Inflater();
+        ifl.setInput(data);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte buf[] = new byte[ZLIB_BUF_SIZE];
+        while (!ifl.finished()) {
+            try {
+                int decBytes = ifl.inflate(buf);
+                baos.write(buf, 0, decBytes);
+            } catch (DataFormatException e) {
+                throw new IOException(e);
+            }
+        }
+        ifl.end();
+        return baos.toByteArray();
+    }
+
+    //endregion
+
     private static String byteArrayToHex(byte[] arr) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < arr.length; i++) {
@@ -402,6 +450,14 @@ public class KaitaiStream {
             sb.append(String.format("%02x", arr[i]));
         }
         return sb.toString();
+    }
+
+    private ByteBuffer wrapBufferLe(int count) throws IOException {
+        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.LITTLE_ENDIAN);
+    }
+
+    private ByteBuffer wrapBufferBe(int count) throws IOException {
+        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.BIG_ENDIAN);
     }
 
     interface KaitaiSeekableStream {
