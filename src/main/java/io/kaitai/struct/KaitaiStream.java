@@ -85,6 +85,15 @@ public class KaitaiStream {
         return st.pos();
     }
 
+    /**
+     * Reports total size of the stream in bytes.
+     * @return total number of bytes available in the stream
+     * @throws IOException
+     */
+    public long size() throws IOException {
+        return st.size();
+    }
+
     //endregion
 
     //region Integer numbers
@@ -461,7 +470,8 @@ public class KaitaiStream {
     }
 
     interface KaitaiSeekableStream {
-        long pos() throws IOException;;
+        long pos() throws IOException;
+        long size() throws IOException;
         void seek(long l) throws IOException;
         int read() throws IOException;
         int read(byte[] buf) throws IOException;
@@ -476,6 +486,11 @@ public class KaitaiStream {
         @Override
         public long pos() {
             return pos;
+        }
+
+        @Override
+        public long size() {
+            return count;
         }
 
         @Override
@@ -503,6 +518,11 @@ public class KaitaiStream {
         @Override
         public long pos() throws IOException {
             return getFilePointer();
+        }
+
+        @Override
+        public long size() throws IOException {
+            return length();
         }
 
         @Override
