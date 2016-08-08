@@ -292,7 +292,10 @@ public class KaitaiStream {
             );
         }
         byte[] buf = new byte[(int) n];
-        st.read(buf);
+        int readCount = st.read(buf);
+        if (readCount < n) {
+            throw new EOFException();
+        }
         return buf;
     }
 
