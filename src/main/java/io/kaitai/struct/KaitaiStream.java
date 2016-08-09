@@ -32,7 +32,22 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 /**
- * This class provides abstraction over either file-based or memory-based streams (using
+ * KaitaiStream is an implementation of
+ * <a href="https://github.com/kaitai-io/kaitai_struct/wiki/Kaitai-Struct-stream-API">Kaitai Struct stream API</a>
+ * for Java. Internally, it uses either RandomAccessFile or
+ * ByteArrayInputStream to read local files and in-memory buffers.
+ *
+ * It provides a wide variety of simple methods to read (parse) binary
+ * representations of primitive types, such as integer and floating
+ * point numbers, byte arrays and strings, and also provides stream
+ * positioning / navigation methods with unified cross-language and
+ * cross-toolkit semantics.
+ *
+ * Typically, end users won't access Kaitai Stream class manually, but
+ * would describe a binary structure format using .ksy language and
+ * then would use Kaitai Struct compiler to generate source code in
+ * desired target language.  That code, in turn, would use this class
+ * and API to do the actual parsing job.
  */
 public class KaitaiStream {
     private KaitaiSeekableStream st;
@@ -59,8 +74,8 @@ public class KaitaiStream {
     //region Stream positioning
 
     /**
-     * Checks if we've reached end of stream, thus no more bytes can be read from it.
-     * @return true if we're at the end of stream, false otherwise
+     * Check if stream pointer is at the end of stream.
+     * @return true if we are located at the end of the stream
      * @throws IOException
      */
     public boolean isEof() throws IOException {
@@ -68,8 +83,8 @@ public class KaitaiStream {
     }
 
     /**
-     * Seeks stream to given new position.
-     * @param newPos new absolute position (in number of bytes from the beginning of the stream)
+     * Set stream pointer to designated position.
+     * @param newPos new position (offset in bytes from the beginning of the stream)
      * @throws IOException
      */
     public void seek(long newPos) throws IOException {
@@ -77,8 +92,8 @@ public class KaitaiStream {
     }
 
     /**
-     * Reports absolute position in the stream.
-     * @return current absolute position (in number of bytes from the beginning of the stream)
+     * Get current position of a stream pointer.
+     * @return pointer position, number of bytes from the beginning of the stream
      * @throws IOException
      */
     public long pos() throws IOException {
@@ -86,8 +101,8 @@ public class KaitaiStream {
     }
 
     /**
-     * Reports total size of the stream in bytes.
-     * @return total number of bytes available in the stream
+     * Get total size of the stream in bytes.
+     * @return size of the stream in bytes
      * @throws IOException
      */
     public long size() throws IOException {
@@ -285,6 +300,13 @@ public class KaitaiStream {
 
     //region Byte arrays
 
+    /**
+     * Reads designated number of bytes from the stream.
+     * @param n number of bytes to read
+     * @return read bytes as byte array
+     * @throws IOException
+     * @throws EOFException if there were less bytes than requested available in the stream
+     */
     public byte[] readBytes(long n) throws IOException {
         if (n > Integer.MAX_VALUE) {
             throw new RuntimeException(
@@ -310,21 +332,27 @@ public class KaitaiStream {
         byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-        int readCount = 0;
+        int readCount;
         while (-1 != (readCount = st.read(buffer)))
             baos.write(buffer, 0, readCount);
 
         return baos.toByteArray();
     }
 
+    /**
+     * Reads next len bytes from the stream and ensures that they match expected
+     * fixed byte array. If they differ, throws a {@link UnexpectedDataError}
+     * runtime exception.
+     * @param len number of bytes to read
+     * @param expected contents to be expected
+     * @return read bytes as byte array, which are guaranteed to equal to expected
+     * @throws IOException
+     * @throws UnexpectedDataError
+     */
     public byte[] ensureFixedContents(int len, byte[] expected) throws IOException {
         byte[] actual = readBytes(len);
-        if (!Arrays.equals(actual, expected)) {
-            throw new RuntimeException(
-                    "Unexpected fixed contents: got " + byteArrayToHex(actual) +
-                    " , was waiting for " + byteArrayToHex(expected)
-            );
-        }
+        if (!Arrays.equals(actual, expected))
+            throw new UnexpectedDataError(actual, expected);
         return actual;
     }
 
@@ -454,16 +482,6 @@ public class KaitaiStream {
 
     //endregion
 
-    private static String byteArrayToHex(byte[] arr) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < arr.length; i++) {
-            if (i > 0)
-                sb.append(' ');
-            sb.append(String.format("%02x", arr[i]));
-        }
-        return sb.toString();
-    }
-
     private ByteBuffer wrapBufferLe(int count) throws IOException {
         return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.LITTLE_ENDIAN);
     }
@@ -531,6 +549,29 @@ public class KaitaiStream {
         @Override
         public boolean isEof() throws IOException {
             return !(getFilePointer() < length());
+        }
+    }
+
+    /**
+     * Exception class for an error that occurs when some fixed content
+     * was expected to appear, but actual data read was different.
+     */
+    public static class UnexpectedDataError extends RuntimeException {
+        public UnexpectedDataError(byte[] actual, byte[] expected) {
+            super(
+                    "Unexpected fixed contents: got " + byteArrayToHex(actual) +
+                    " , was waiting for " + byteArrayToHex(expected)
+            );
+        }
+
+        private static String byteArrayToHex(byte[] arr) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < arr.length; i++) {
+                if (i > 0)
+                    sb.append(' ');
+                sb.append(String.format("%02x", arr[i]));
+            }
+            return sb.toString();
         }
     }
 }
