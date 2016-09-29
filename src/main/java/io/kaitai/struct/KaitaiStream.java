@@ -71,6 +71,14 @@ public class KaitaiStream {
         st = new BAISWrapper(arr);
     }
 
+    /**
+     * Closes the stream safely. If there was an open file associated with it, closes that file.
+     * For streams that were reading from in-memory array, does nothing.
+     */
+    public void close() throws IOException {
+        st.close();
+    }
+
     //region Stream positioning
 
     /**
@@ -491,6 +499,7 @@ public class KaitaiStream {
     }
 
     interface KaitaiSeekableStream {
+        void close() throws IOException;
         long pos() throws IOException;
         long size() throws IOException;
         void seek(long l) throws IOException;
