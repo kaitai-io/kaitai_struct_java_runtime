@@ -23,10 +23,15 @@
 
 package io.kaitai.struct;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
@@ -34,8 +39,8 @@ import java.util.zip.Inflater;
 /**
  * KaitaiStream is an implementation of
  * <a href="https://github.com/kaitai-io/kaitai_struct/wiki/Kaitai-Struct-stream-API">Kaitai Struct stream API</a>
- * for Java. Internally, it uses either RandomAccessFile or
- * ByteArrayInputStream to read local files and in-memory buffers.
+ * for Java. Internally, it uses a ByteBuffer (either a MappedByteBuffer
+ * backed by FileChannel, or a regular wrapper over a given byte array).
  *
  * It provides a wide variety of simple methods to read (parse) binary
  * representations of primitive types, such as integer and floating
@@ -50,25 +55,28 @@ import java.util.zip.Inflater;
  * and API to do the actual parsing job.
  */
 public class KaitaiStream {
-    private KaitaiSeekableStream st;
+    private FileChannel fc;
+    private ByteBuffer bb;
 
     /**
-     * Initializes a stream, reading from a local file with specified fileName. Internally, RandomAccessFile would be
-     * used to allow seeking within the stream and reading arbitrary bytes.
+     * Initializes a stream, reading from a local file with specified fileName.
+     * Internally, FileChannel + MappedByteBuffer will be used.
      * @param fileName file to read
-     * @throws FileNotFoundException
+     * @throws IOException
      */
-    public KaitaiStream(String fileName) throws FileNotFoundException {
-        st = new RAFWrapper(fileName, "r");
+    public KaitaiStream(String fileName) throws IOException {
+        fc = FileChannel.open(Paths.get(fileName), StandardOpenOption.READ);
+        bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
     }
 
     /**
-     * Initializes a stream that will get data from given byte array when read. Internally, ByteArrayInputStream will
-     * be used.
+     * Initializes a stream that will get data from given byte array when read.
+     * Internally, ByteBuffer wrapping given array will be used.
      * @param arr byte array to read
      */
     public KaitaiStream(byte[] arr) {
-        st = new BAISWrapper(arr);
+        fc = null;
+        bb = ByteBuffer.wrap(arr);
     }
 
     /**
@@ -76,7 +84,8 @@ public class KaitaiStream {
      * For streams that were reading from in-memory array, does nothing.
      */
     public void close() throws IOException {
-        st.close();
+        if (fc != null)
+            fc.close();
     }
 
     //region Stream positioning
@@ -87,7 +96,7 @@ public class KaitaiStream {
      * @throws IOException
      */
     public boolean isEof() throws IOException {
-        return st.isEof();
+        return !bb.hasRemaining();
     }
 
     /**
@@ -95,8 +104,15 @@ public class KaitaiStream {
      * @param newPos new position (offset in bytes from the beginning of the stream)
      * @throws IOException
      */
+    public void seek(int newPos) throws IOException {
+        bb.position(newPos);
+    }
+
     public void seek(long newPos) throws IOException {
-        st.seek(newPos);
+        if (newPos > Integer.MAX_VALUE) {
+            throw new RuntimeException("Java ByteBuffer can't be seeked past Integer.MAX_VALUE");
+        }
+        bb.position((int) newPos);
     }
 
     /**
@@ -104,8 +120,8 @@ public class KaitaiStream {
      * @return pointer position, number of bytes from the beginning of the stream
      * @throws IOException
      */
-    public long pos() throws IOException {
-        return st.pos();
+    public int pos() throws IOException {
+        return bb.position();
     }
 
     /**
@@ -114,7 +130,7 @@ public class KaitaiStream {
      * @throws IOException
      */
     public long size() throws IOException {
-        return st.size();
+        return bb.limit();
     }
 
     //endregion
@@ -128,75 +144,44 @@ public class KaitaiStream {
      * @return 1-byte integer read from a stream
      * @throws IOException
      */
-    public byte readS1() throws IOException {
-        int t = st.read();
-        if (t < 0) {
-            throw new EOFException();
-        } else {
-            return (byte) t;
-        }
+    public byte readS1() {
+        return bb.get();
     }
 
     //region Big-endian
 
     public short readS2be() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        if ((b1 | b2) < 0) {
-            throw new EOFException();
-        } else {
-            return (short) ((b1 << 8) + (b2 << 0));
-        }
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getShort();
     }
 
     public int readS4be() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        int b3 = st.read();
-        int b4 = st.read();
-        if ((b1 | b2 | b3 | b4) < 0) {
-            throw new EOFException();
-        } else {
-            return (b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0);
-        }
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getInt();
     }
 
     public long readS8be() throws IOException {
-        long b1 = readU4be();
-        long b2 = readU4be();
-        return (b1 << 32) + (b2 << 0);
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getLong();
     }
 
     //endregion
 
     //region Little-endian
 
-    public short readS2le() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        if ((b1 | b2) < 0) {
-            throw new EOFException();
-        } else {
-            return (short) ((b2 << 8) + (b1 << 0));
-        }
+    public short readS2le() {
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getShort();
     }
 
     public int readS4le() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        int b3 = st.read();
-        int b4 = st.read();
-        if ((b1 | b2 | b3 | b4) < 0) {
-            throw new EOFException();
-        } else {
-            return (b4 << 24) + (b3 << 16) + (b2 << 8) + (b1 << 0);
-        }
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getInt();
     }
 
     public long readS8le() throws IOException {
-        long b1 = readU4le();
-        long b2 = readU4le();
-        return (b2 << 32) + (b1 << 0);
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getLong();
     }
 
     //endregion
@@ -206,36 +191,19 @@ public class KaitaiStream {
     //region Unsigned
 
     public int readU1() throws IOException {
-        int t = st.read();
-        if (t < 0) {
-            throw new EOFException();
-        } else {
-            return t;
-        }
+        return bb.get() & 0xff;
     }
 
     //region Big-endian
 
     public int readU2be() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        if ((b1 | b2) < 0) {
-            throw new EOFException();
-        } else {
-            return (b1 << 8) + (b2 << 0);
-        }
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getShort() & 0xffff;
     }
 
     public long readU4be() throws IOException {
-        long b1 = st.read();
-        long b2 = st.read();
-        long b3 = st.read();
-        long b4 = st.read();
-        if ((b1 | b2 | b3 | b4) < 0) {
-            throw new EOFException();
-        } else {
-            return (b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0);
-        }
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getInt() & 0xffffffffL;
     }
 
     public long readU8be() throws IOException {
@@ -247,25 +215,13 @@ public class KaitaiStream {
     //region Little-endian
 
     public int readU2le() throws IOException {
-        int b1 = st.read();
-        int b2 = st.read();
-        if ((b1 | b2) < 0) {
-            throw new EOFException();
-        } else {
-            return (b2 << 8) + (b1 << 0);
-        }
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getShort() & 0xffff;
     }
 
     public long readU4le() throws IOException {
-        long b1 = st.read();
-        long b2 = st.read();
-        long b3 = st.read();
-        long b4 = st.read();
-        if ((b1 | b2 | b3 | b4) < 0) {
-            throw new EOFException();
-        } else {
-            return (b4 << 24) + (b3 << 16) + (b2 << 8) + (b1 << 0);
-        }
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getInt() & 0xffffffffL;
     }
 
     public long readU8le() throws IOException {
@@ -283,11 +239,13 @@ public class KaitaiStream {
     //region Big-endian
 
     public float readF4be() throws IOException {
-        return wrapBufferBe(4).getFloat();
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getFloat();
     }
 
     public double readF8be() throws IOException {
-        return wrapBufferBe(8).getDouble();
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getDouble();
     }
 
     //endregion
@@ -295,11 +253,13 @@ public class KaitaiStream {
     //region Little-endian
 
     public float readF4le() throws IOException {
-        return wrapBufferLe(4).getFloat();
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getFloat();
     }
 
     public double readF8le() throws IOException {
-        return wrapBufferLe(8).getDouble();
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getDouble();
     }
 
     //endregion
@@ -322,14 +282,9 @@ public class KaitaiStream {
             );
         }
         byte[] buf = new byte[(int) n];
-        int readCount = st.read(buf);
-        if (readCount < n) {
-            throw new EOFException();
-        }
+        bb.get(buf);
         return buf;
     }
-
-    private static final int DEFAULT_BUFFER_SIZE = 4 * 1024;
 
     /**
      * Reads all the remaining bytes in a stream as byte array.
@@ -337,14 +292,9 @@ public class KaitaiStream {
      * @throws IOException
      */
     public byte[] readBytesFull() throws IOException {
-        byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-        int readCount;
-        while (-1 != (readCount = st.read(buffer)))
-            baos.write(buffer, 0, readCount);
-
-        return baos.toByteArray();
+        byte[] buf = new byte[bb.remaining()];
+        bb.get(buf);
+        return buf;
     }
 
     /**
@@ -380,18 +330,19 @@ public class KaitaiStream {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         Charset cs = Charset.forName(encoding);
         while (true) {
-            int c = st.read();
-            if (c < 0) {
+            if (!bb.hasRemaining()) {
                 if (eosError) {
                     throw new RuntimeException("End of stream reached, but no terminator " + term + " found");
                 } else {
                     return new String(buf.toByteArray(), cs);
                 }
-            } else if (c == term) {
+            }
+            int c = bb.get();
+            if (c == term) {
                 if (includeTerm)
                     buf.write(c);
                 if (!consumeTerm)
-                    st.seek(st.pos() - 1);
+                    bb.position(bb.position() - 1);
                 return new String(buf.toByteArray(), cs);
             }
             buf.write(c);
@@ -489,77 +440,6 @@ public class KaitaiStream {
     }
 
     //endregion
-
-    private ByteBuffer wrapBufferLe(int count) throws IOException {
-        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.LITTLE_ENDIAN);
-    }
-
-    private ByteBuffer wrapBufferBe(int count) throws IOException {
-        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.BIG_ENDIAN);
-    }
-
-    interface KaitaiSeekableStream {
-        void close() throws IOException;
-        long pos() throws IOException;
-        long size() throws IOException;
-        void seek(long l) throws IOException;
-        int read() throws IOException;
-        int read(byte[] buf) throws IOException;
-        boolean isEof() throws IOException;
-    }
-
-    static class BAISWrapper extends ByteArrayInputStream implements KaitaiSeekableStream {
-        public BAISWrapper(byte[] bytes) {
-            super(bytes);
-        }
-
-        @Override
-        public long pos() {
-            return pos;
-        }
-
-        @Override
-        public long size() {
-            return count;
-        }
-
-        @Override
-        public void seek(long newPos) {
-            if (newPos > Integer.MAX_VALUE) {
-                throw new RuntimeException(
-                        "Java in-memory ByteArrays can be indexed only up to 31 bits, but " + newPos + " offset was requested"
-                );
-            } else {
-                pos = (int) newPos;
-            }
-        }
-
-        @Override
-        public boolean isEof() {
-            return !(this.pos < this.count);
-        }
-    }
-
-    static class RAFWrapper extends RandomAccessFile implements KaitaiSeekableStream {
-        public RAFWrapper(String fileName, String r) throws FileNotFoundException {
-            super(fileName, r);
-        }
-
-        @Override
-        public long pos() throws IOException {
-            return getFilePointer();
-        }
-
-        @Override
-        public long size() throws IOException {
-            return length();
-        }
-
-        @Override
-        public boolean isEof() throws IOException {
-            return !(getFilePointer() < length());
-        }
-    }
 
     /**
      * Exception class for an error that occurs when some fixed content
