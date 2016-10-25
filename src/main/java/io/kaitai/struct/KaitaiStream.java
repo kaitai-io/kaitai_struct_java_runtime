@@ -322,6 +322,11 @@ public class KaitaiStream {
             );
         }
         byte[] buf = new byte[(int) n];
+
+        // Reading 0 bytes is always ok and never raises an exception
+        if (n == 0)
+            return buf;
+
         int readCount = st.read(buf);
         if (readCount < n) {
             throw new EOFException();
