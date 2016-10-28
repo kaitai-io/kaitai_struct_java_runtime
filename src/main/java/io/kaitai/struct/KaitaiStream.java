@@ -441,6 +441,42 @@ public class KaitaiStream {
 
     //endregion
 
+    //region Misc runtime operations
+
+    /**
+     * Performs modulo operation between two integers: dividend `a`
+     * and divisor `b`. Divisor `b` is expected to be positive. The
+     * result is always 0 <= x <= b - 1.
+     * @param a dividend
+     * @param b divisor
+     */
+    public static int mod(int a, int b) {
+        if (b <= 0)
+            throw new ArithmeticException("mod divisor <= 0");
+        int r = a % b;
+        if (r < 0)
+            r += b;
+        return r;
+    }
+
+    /**
+     * Performs modulo operation between two integers: dividend `a`
+     * and divisor `b`. Divisor `b` is expected to be positive. The
+     * result is always 0 <= x <= b - 1.
+     * @param a dividend
+     * @param b divisor
+     */
+    public static long mod(long a, long b) {
+        if (b <= 0)
+            throw new ArithmeticException("mod divisor <= 0");
+        long r = a % b;
+        if (r < 0)
+            r += b;
+        return r;
+    }
+
+    //endregion
+
     /**
      * Exception class for an error that occurs when some fixed content
      * was expected to appear, but actual data read was different.
