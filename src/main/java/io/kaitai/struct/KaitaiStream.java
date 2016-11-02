@@ -414,7 +414,7 @@ public class KaitaiStream {
      * @param key value to XOR with
      * @return processed data
      */
-    public byte[] processXor(byte[] data, int key) {
+    public static byte[] processXor(byte[] data, int key) {
         int dataLen = data.length;
         byte[] r = new byte[dataLen];
         for (int i = 0; i < dataLen; i++)
@@ -430,7 +430,7 @@ public class KaitaiStream {
      * @param key array of bytes to XOR with
      * @return processed data
      */
-    public byte[] processXor(byte[] data, byte[] key) {
+    public static byte[] processXor(byte[] data, byte[] key) {
         int dataLen = data.length;
         int valueLen = key.length;
 
@@ -452,7 +452,7 @@ public class KaitaiStream {
      * @param groupSize number of bytes per group to shift
      * @return copy of source array with requested shift applied
      */
-    public byte[] processRotateLeft(byte[] data, int amount, int groupSize) {
+    public static byte[] processRotateLeft(byte[] data, int amount, int groupSize) {
         byte[] r = new byte[data.length];
         switch (groupSize) {
             case 1:
@@ -476,7 +476,7 @@ public class KaitaiStream {
      * @return unpacked data
      * @throws IOException
      */
-    public byte[] processZlib(byte[] data) throws IOException {
+    public static byte[] processZlib(byte[] data) throws IOException {
         Inflater ifl = new Inflater();
         ifl.setInput(data);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
