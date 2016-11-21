@@ -62,7 +62,7 @@ public class KaitaiStream {
      * Initializes a stream, reading from a local file with specified fileName.
      * Internally, FileChannel + MappedByteBuffer will be used.
      * @param fileName file to read
-     * @throws IOException
+     * @throws IOException if file can't be read
      */
     public KaitaiStream(String fileName) throws IOException {
         fc = FileChannel.open(Paths.get(fileName), StandardOpenOption.READ);
@@ -82,6 +82,7 @@ public class KaitaiStream {
     /**
      * Closes the stream safely. If there was an open file associated with it, closes that file.
      * For streams that were reading from in-memory array, does nothing.
+     * @throws IOException if FileChannel can't be closed
      */
     public void close() throws IOException {
         if (fc != null)
@@ -93,7 +94,7 @@ public class KaitaiStream {
     /**
      * Check if stream pointer is at the end of stream.
      * @return true if we are located at the end of the stream
-     * @throws IOException
+     * @throws IOException if stream can't be read
      */
     public boolean isEof() throws IOException {
         return !bb.hasRemaining();
@@ -102,7 +103,7 @@ public class KaitaiStream {
     /**
      * Set stream pointer to designated position.
      * @param newPos new position (offset in bytes from the beginning of the stream)
-     * @throws IOException
+     * @throws IOException if stream can't be read
      */
     public void seek(int newPos) throws IOException {
         bb.position(newPos);
@@ -118,7 +119,7 @@ public class KaitaiStream {
     /**
      * Get current position of a stream pointer.
      * @return pointer position, number of bytes from the beginning of the stream
-     * @throws IOException
+     * @throws IOException if stream can't be read
      */
     public int pos() throws IOException {
         return bb.position();
@@ -127,7 +128,7 @@ public class KaitaiStream {
     /**
      * Get total size of the stream in bytes.
      * @return size of the stream in bytes
-     * @throws IOException
+     * @throws IOException if stream can't be read
      */
     public long size() throws IOException {
         return bb.limit();
@@ -142,7 +143,6 @@ public class KaitaiStream {
     /**
      * Reads one signed 1-byte integer, returning it properly as Java's "byte" type.
      * @return 1-byte integer read from a stream
-     * @throws IOException
      */
     public byte readS1() {
         return bb.get();
@@ -272,7 +272,7 @@ public class KaitaiStream {
      * Reads designated number of bytes from the stream.
      * @param n number of bytes to read
      * @return read bytes as byte array
-     * @throws IOException
+     * @throws IOException if stream can't be read
      * @throws EOFException if there were less bytes than requested available in the stream
      */
     public byte[] readBytes(long n) throws IOException {
@@ -289,7 +289,7 @@ public class KaitaiStream {
     /**
      * Reads all the remaining bytes in a stream as byte array.
      * @return all remaining bytes in a stream as byte array
-     * @throws IOException
+     * @throws IOException if stream can't be read
      */
     public byte[] readBytesFull() throws IOException {
         byte[] buf = new byte[bb.remaining()];
@@ -304,8 +304,8 @@ public class KaitaiStream {
      * @param len number of bytes to read
      * @param expected contents to be expected
      * @return read bytes as byte array, which are guaranteed to equal to expected
-     * @throws IOException
-     * @throws UnexpectedDataError
+     * @throws IOException if stream can't be read
+     * @throws UnexpectedDataError if read data from stream isn't equal to given data
      */
     public byte[] ensureFixedContents(int len, byte[] expected) throws IOException {
         byte[] actual = readBytes(len);
@@ -420,7 +420,7 @@ public class KaitaiStream {
      * Performs an unpacking ("inflation") of zlib-compressed data with usual zlib headers.
      * @param data data to unpack
      * @return unpacked data
-     * @throws IOException
+     * @throws IOException if data can't be decoded
      */
     public static byte[] processZlib(byte[] data) throws IOException {
         Inflater ifl = new Inflater();
@@ -446,9 +446,10 @@ public class KaitaiStream {
     /**
      * Performs modulo operation between two integers: dividend `a`
      * and divisor `b`. Divisor `b` is expected to be positive. The
-     * result is always 0 <= x <= b - 1.
+     * result is always 0 &lt;= x &lt;= b - 1.
      * @param a dividend
      * @param b divisor
+     * @return result
      */
     public static int mod(int a, int b) {
         if (b <= 0)
@@ -462,9 +463,10 @@ public class KaitaiStream {
     /**
      * Performs modulo operation between two integers: dividend `a`
      * and divisor `b`. Divisor `b` is expected to be positive. The
-     * result is always 0 <= x <= b - 1.
+     * result is always 0 &lt;= x &lt;= b - 1.
      * @param a dividend
      * @param b divisor
+     * @return result
      */
     public static long mod(long a, long b) {
         if (b <= 0)
