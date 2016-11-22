@@ -298,17 +298,17 @@ public class KaitaiStream {
     }
 
     /**
-     * Reads next len bytes from the stream and ensures that they match expected
-     * fixed byte array. If they differ, throws a {@link UnexpectedDataError}
+     * Checks that next bytes in the stream match match expected fixed byte array.
+     * It does so by determining number of bytes to compare, reading them, and doing
+     * the actual comparison. If they differ, throws a {@link UnexpectedDataError}
      * runtime exception.
-     * @param len number of bytes to read
      * @param expected contents to be expected
      * @return read bytes as byte array, which are guaranteed to equal to expected
      * @throws IOException if stream can't be read
      * @throws UnexpectedDataError if read data from stream isn't equal to given data
      */
-    public byte[] ensureFixedContents(int len, byte[] expected) throws IOException {
-        byte[] actual = readBytes(len);
+    public byte[] ensureFixedContents(byte[] expected) throws IOException {
+        byte[] actual = readBytes(expected.length);
         if (!Arrays.equals(actual, expected))
             throw new UnexpectedDataError(actual, expected);
         return actual;
