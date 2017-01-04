@@ -57,6 +57,8 @@ import java.util.zip.Inflater;
 public class KaitaiStream {
     private FileChannel fc;
     private ByteBuffer bb;
+    private int bitsLeft = 0;
+    private long bits = 0;
 
     /**
      * Initializes a stream, reading from a local file with specified fileName.
@@ -263,6 +265,40 @@ public class KaitaiStream {
     }
 
     //endregion
+
+    //endregion
+
+    //region Unaligned bit values
+
+    public long readBitsInt(int n) throws IOException {
+        int bitsNeeded = n - bitsLeft;
+        if (bitsNeeded > 0) {
+            // 1 bit  => 1 byte
+            // 8 bits => 1 byte
+            // 9 bits => 2 bytes
+            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1;
+            byte[] buf = readBytes(bytesNeeded);
+            for (byte b : buf) {
+                bits <<= 8;
+                bits |= b;
+                bitsLeft += 8;
+            }
+        }
+
+        // raw mask with required number of 1s, starting from lowest bit
+        long mask = (1 << n) - 1;
+        // shift mask to align with highest bits available in "bits"
+        int shiftBits = bitsLeft - n;
+        mask <<= shiftBits;
+        // derive reading result
+        long res = (bits & mask) >> shiftBits;
+        // clear top bits that we've just read => AND with 1s
+        bitsLeft -= n;
+        mask = (1 << bitsLeft) - 1;
+        bits &= mask;
+
+        return res;
+    }
 
     //endregion
 
