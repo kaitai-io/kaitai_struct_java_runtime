@@ -449,7 +449,7 @@ public class KaitaiStream {
      * @return unpacked data
      * @throws RuntimeException if data can't be decoded
      */
-    public static byte[] processZlib(byte[] data) throws IOException {
+    public static byte[] processZlib(byte[] data) {
         Inflater ifl = new Inflater();
         ifl.setInput(data);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
