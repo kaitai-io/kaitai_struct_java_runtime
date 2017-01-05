@@ -447,7 +447,7 @@ public class KaitaiStream {
      * Performs an unpacking ("inflation") of zlib-compressed data with usual zlib headers.
      * @param data data to unpack
      * @return unpacked data
-     * @throws IOException if data can't be decoded
+     * @throws RuntimeException if data can't be decoded
      */
     public static byte[] processZlib(byte[] data) throws IOException {
         Inflater ifl = new Inflater();
@@ -459,7 +459,7 @@ public class KaitaiStream {
                 int decBytes = ifl.inflate(buf);
                 baos.write(buf, 0, decBytes);
             } catch (DataFormatException e) {
-                throw new IOException(e);
+                throw new RuntimeException(e);
             }
         }
         ifl.end();
