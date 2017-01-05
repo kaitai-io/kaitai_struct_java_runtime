@@ -24,7 +24,6 @@
 package io.kaitai.struct;
 
 import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -55,8 +54,8 @@ import java.util.zip.Inflater;
  * and API to do the actual parsing job.
  */
 public class KaitaiStream {
-    private FileChannel fc;
-    private ByteBuffer bb;
+    private final FileChannel fc;
+    private final ByteBuffer bb;
     private int bitsLeft = 0;
     private long bits = 0;
 
@@ -96,22 +95,20 @@ public class KaitaiStream {
     /**
      * Check if stream pointer is at the end of stream.
      * @return true if we are located at the end of the stream
-     * @throws IOException if stream can't be read
      */
-    public boolean isEof() throws IOException {
+    public boolean isEof() {
         return !bb.hasRemaining();
     }
 
     /**
      * Set stream pointer to designated position.
      * @param newPos new position (offset in bytes from the beginning of the stream)
-     * @throws IOException if stream can't be read
      */
-    public void seek(int newPos) throws IOException {
+    public void seek(int newPos) {
         bb.position(newPos);
     }
 
-    public void seek(long newPos) throws IOException {
+    public void seek(long newPos) {
         if (newPos > Integer.MAX_VALUE) {
             throw new RuntimeException("Java ByteBuffer can't be seeked past Integer.MAX_VALUE");
         }
@@ -121,18 +118,16 @@ public class KaitaiStream {
     /**
      * Get current position of a stream pointer.
      * @return pointer position, number of bytes from the beginning of the stream
-     * @throws IOException if stream can't be read
      */
-    public int pos() throws IOException {
+    public int pos() {
         return bb.position();
     }
 
     /**
      * Get total size of the stream in bytes.
      * @return size of the stream in bytes
-     * @throws IOException if stream can't be read
      */
-    public long size() throws IOException {
+    public long size() {
         return bb.limit();
     }
 
@@ -152,17 +147,17 @@ public class KaitaiStream {
 
     //region Big-endian
 
-    public short readS2be() throws IOException {
+    public short readS2be() {
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getShort();
     }
 
-    public int readS4be() throws IOException {
+    public int readS4be() {
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getInt();
     }
 
-    public long readS8be() throws IOException {
+    public long readS8be() {
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getLong();
     }
@@ -176,12 +171,12 @@ public class KaitaiStream {
         return bb.getShort();
     }
 
-    public int readS4le() throws IOException {
+    public int readS4le() {
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getInt();
     }
 
-    public long readS8le() throws IOException {
+    public long readS8le() {
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getLong();
     }
@@ -192,23 +187,23 @@ public class KaitaiStream {
 
     //region Unsigned
 
-    public int readU1() throws IOException {
+    public int readU1() {
         return bb.get() & 0xff;
     }
 
     //region Big-endian
 
-    public int readU2be() throws IOException {
+    public int readU2be() {
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getShort() & 0xffff;
     }
 
-    public long readU4be() throws IOException {
+    public long readU4be() {
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getInt() & 0xffffffffL;
     }
 
-    public long readU8be() throws IOException {
+    public long readU8be() {
         return readS8be();
     }
 
@@ -216,17 +211,17 @@ public class KaitaiStream {
 
     //region Little-endian
 
-    public int readU2le() throws IOException {
+    public int readU2le() {
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getShort() & 0xffff;
     }
 
-    public long readU4le() throws IOException {
+    public long readU4le() {
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getInt() & 0xffffffffL;
     }
 
-    public long readU8le() throws IOException {
+    public long readU8le() {
         return readS8le();
     }
 
@@ -240,12 +235,12 @@ public class KaitaiStream {
 
     //region Big-endian
 
-    public float readF4be() throws IOException {
+    public float readF4be() {
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getFloat();
     }
 
-    public double readF8be() throws IOException {
+    public double readF8be() {
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getDouble();
     }
@@ -254,12 +249,12 @@ public class KaitaiStream {
 
     //region Little-endian
 
-    public float readF4le() throws IOException {
+    public float readF4le() {
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getFloat();
     }
 
-    public double readF8le() throws IOException {
+    public double readF8le() {
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getDouble();
     }
@@ -270,7 +265,7 @@ public class KaitaiStream {
 
     //region Unaligned bit values
 
-    public long readBitsInt(int n) throws IOException {
+    public long readBitsInt(int n) {
         int bitsNeeded = n - bitsLeft;
         if (bitsNeeded > 0) {
             // 1 bit  => 1 byte
@@ -308,10 +303,8 @@ public class KaitaiStream {
      * Reads designated number of bytes from the stream.
      * @param n number of bytes to read
      * @return read bytes as byte array
-     * @throws IOException if stream can't be read
-     * @throws EOFException if there were less bytes than requested available in the stream
      */
-    public byte[] readBytes(long n) throws IOException {
+    public byte[] readBytes(long n) {
         if (n > Integer.MAX_VALUE) {
             throw new RuntimeException(
                     "Java byte arrays can be indexed only up to 31 bits, but " + n + " size was requested"
@@ -325,9 +318,8 @@ public class KaitaiStream {
     /**
      * Reads all the remaining bytes in a stream as byte array.
      * @return all remaining bytes in a stream as byte array
-     * @throws IOException if stream can't be read
      */
-    public byte[] readBytesFull() throws IOException {
+    public byte[] readBytesFull() {
         byte[] buf = new byte[bb.remaining()];
         bb.get(buf);
         return buf;
@@ -340,10 +332,9 @@ public class KaitaiStream {
      * runtime exception.
      * @param expected contents to be expected
      * @return read bytes as byte array, which are guaranteed to equal to expected
-     * @throws IOException if stream can't be read
      * @throws UnexpectedDataError if read data from stream isn't equal to given data
      */
-    public byte[] ensureFixedContents(byte[] expected) throws IOException {
+    public byte[] ensureFixedContents(byte[] expected) {
         byte[] actual = readBytes(expected.length);
         if (!Arrays.equals(actual, expected))
             throw new UnexpectedDataError(actual, expected);
@@ -354,15 +345,15 @@ public class KaitaiStream {
 
     //region Strings
 
-    public String readStrEos(String encoding) throws IOException {
+    public String readStrEos(String encoding) {
         return new String(readBytesFull(), Charset.forName(encoding));
     }
 
-    public String readStrByteLimit(long len, String encoding) throws IOException {
+    public String readStrByteLimit(long len, String encoding) {
         return new String(readBytes(len), Charset.forName(encoding));
     }
 
-    public String readStrz(String encoding, int term, boolean includeTerm, boolean consumeTerm, boolean eosError) throws IOException {
+    public String readStrz(String encoding, int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         Charset cs = Charset.forName(encoding);
         while (true) {
