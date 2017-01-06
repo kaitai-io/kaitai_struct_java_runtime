@@ -81,6 +81,26 @@ public class KaitaiStream {
     }
 
     /**
+     * Provide a read-only version of the {@link ByteBuffer} backing the data of this instance.
+     * This way one can access the underluying raw bytes associated with this structure, but it is
+     * important to note that the caller needs to know what this raw data is: Depending on the
+     * hierarchy of user types, how the format has been described and how a user type is actually
+     * used, it might be that one accesses all data of some format or only a special substream
+     * view of it. We can't know currently, so one needs to keep that in mind when authoring a KSY
+     * and e.g. use substreams with user types whenever such a type most likely needs to access its
+     * underluying raw data. Using a substream in KSY and directly passing some raw data to a user
+     * type outside of normal KS parse order is equivalent and will provide the same results. If no
+     * substream is used instead, the here provided data might differ depending on the context in
+     * which the associated type was parsed, because the underluying {@link ByteBuffer} might
+     * contain the data of all parent types and such as well and not only the one the caller is
+     * actually interested in.
+     * @return read-only {@link ByteBuffer} to access raw data for the associated type.
+     */
+    public ByteBuffer asRoBuffer() {
+      return this.bb.asReadOnlyBuffer();
+    }
+
+    /**
      * Closes the stream safely. If there was an open file associated with it, closes that file.
      * For streams that were reading from in-memory array, does nothing.
      * @throws IOException if FileChannel can't be closed
