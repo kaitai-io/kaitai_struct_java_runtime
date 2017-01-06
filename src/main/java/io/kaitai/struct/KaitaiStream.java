@@ -96,7 +96,7 @@ public class KaitaiStream {
      * actually interested in.
      * @return read-only {@link ByteBuffer} to access raw data for the associated type.
      */
-    public ByteBuffer asReadOnlyBuffer() {
+    public ByteBuffer asRoBuffer() {
       return this.bb.asReadOnlyBuffer();
     }
 
