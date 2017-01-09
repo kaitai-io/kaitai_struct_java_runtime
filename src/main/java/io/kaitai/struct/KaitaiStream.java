@@ -487,22 +487,6 @@ public class KaitaiStream {
     }
 
     /**
-     * Create string representation from packed BCD, were data is read byte per byte and added to
-     * the returned {@link StringBuilder} in the order of the {@code byte[]}. So we don't care about
-     * the endianness of the data here and leave decisions about that to the caller.
-     * @param data
-     * @return
-     */
-    private static StringBuilder processBcdToStr(byte[] data) {
-        StringBuilder sb = new StringBuilder(data.length * 2);
-        for (byte element : data) {
-            sb.append(String.format("%02x", element));
-        }
-
-        return sb;
-    }
-
-    /**
      * Create string representation from packed BCD, taking endianness of the given data and what
      * the caller expects as the human read-order of the decimal into account. The results are ASCII
      * encoded bytes, which need to be converted back to a proper string afterwards, simply because
@@ -515,15 +499,22 @@ public class KaitaiStream {
     public static byte[] processBcdToStr(byte[]     data,
                                          boolean    isLittleEndian,
                                          boolean    needsLeftToRight) {
-        StringBuilder sb = KaitaiStream.processBcdToStr(data);
+        StringBuilder sb = new StringBuilder(data.length * 2);
 
-        if (( isLittleEndian &&  needsLeftToRight) ||
-            (!isLittleEndian && !needsLeftToRight)) {
-            sb.reverse();
+        for (byte element : data) {
+            String pair = String.format("%02x", element);
+
+            if (( isLittleEndian &&  needsLeftToRight) ||
+                (!isLittleEndian && !needsLeftToRight)) {
+                sb.insert(0, pair);
+            }
+            else {
+                sb.append(pair);
+            }
         }
 
-        String retValStr    = sb.toString();
-        byte[] retVal       = retValStr.getBytes(Charset.forName("US_ASCII"));
+        String  retValStr   = sb.toString();
+        byte[]  retVal      = retValStr.getBytes();
 
         return retVal;
     }
@@ -537,13 +528,13 @@ public class KaitaiStream {
      */
     public static byte[] processBcdToDecimal(   byte[]  data,
                                                 boolean isLittleEndian) {
-        StringBuilder   sb          = KaitaiStream.processBcdToStr(data);
-        String          retValStr   = sb.toString();
-        byte[]          retVal      = new byte[data.length];
-        ByteOrder       retValBo    = isLittleEndian ?  ByteOrder.LITTLE_ENDIAN :
+        byte[]      strDecimal  = KaitaiStream.processBcdToStr(data, isLittleEndian, true);
+        String      retValStr   = new String(strDecimal);
+        byte[]      retVal      = new byte[data.length];
+        ByteOrder   retValBo    = isLittleEndian ?  ByteOrder.LITTLE_ENDIAN :
                                                         ByteOrder.BIG_ENDIAN;
-        ByteBuffer      retValBb    = ByteBuffer.wrap (retVal)
-                                                .order(retValBo);
+        ByteBuffer  retValBb    = ByteBuffer.wrap (retVal)
+                                            .order(retValBo);
 
         switch (data.length) {
             case 1:
