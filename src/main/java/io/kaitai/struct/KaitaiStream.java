@@ -491,10 +491,10 @@ public class KaitaiStream {
      * the caller expects as the human read-order of the decimal into account. The results are ASCII
      * encoded bytes, which need to be converted back to a proper string afterwards, simply because
      * currently all {@code process} statements provide {@code byte[]}.
-     * @param data
-     * @param isLittleEndian
-     * @param needsLeftToRight
-     * @return
+     * @param data Source data to process.
+     * @param isLittleEndian Endianness associated with the underlying type.
+     * @param needsLeftToRight Read direction of the created string decimal.
+     * @return {@code byte[]} of the created string representation, with each decimal being one {@code byte}.
      */
     public static byte[] processBcdToStr(byte[]     data,
                                          boolean    isLittleEndian,
@@ -522,9 +522,9 @@ public class KaitaiStream {
     /**
      * Create 2-complement representation from packed BCD, so that callers can read numeric decimals
      * using e.g. {@link #readU2le()} instead of strings.
-     * @param data
-     * @param isLittleEndian
-     * @return
+     * @param data Source data to process.
+     * @param isLittleEndian Endianness associated with the underlying type.
+     * @return {@code byte[]} with raw binary decimal.
      */
     public static byte[] processBcdToDecimal(   byte[]  data,
                                                 boolean isLittleEndian) {
@@ -532,7 +532,7 @@ public class KaitaiStream {
         String      retValStr   = new String(strDecimal);
         byte[]      retVal      = new byte[data.length];
         ByteOrder   retValBo    = isLittleEndian ?  ByteOrder.LITTLE_ENDIAN :
-                                                        ByteOrder.BIG_ENDIAN;
+                                                    ByteOrder.BIG_ENDIAN;
         ByteBuffer  retValBb    = ByteBuffer.wrap (retVal)
                                             .order(retValBo);
 
