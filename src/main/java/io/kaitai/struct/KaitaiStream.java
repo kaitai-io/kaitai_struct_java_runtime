@@ -499,13 +499,18 @@ public class KaitaiStream {
     public static byte[] processBcdToStr(byte[]     data,
                                          boolean    isLittleEndian,
                                          boolean    needsLeftToRight) {
-        StringBuilder sb = new StringBuilder(data.length * 2);
+        StringBuilder   sb      = new StringBuilder(data.length * 2);
+        boolean         insert  = false;
+
+        if (( isLittleEndian &&  needsLeftToRight) ||
+            (!isLittleEndian && !needsLeftToRight)) {
+            insert = true;
+        }
 
         for (byte element : data) {
             String pair = String.format("%02x", element);
 
-            if (( isLittleEndian &&  needsLeftToRight) ||
-                (!isLittleEndian && !needsLeftToRight)) {
+            if (insert) {
                 sb.insert(0, pair);
             }
             else {
