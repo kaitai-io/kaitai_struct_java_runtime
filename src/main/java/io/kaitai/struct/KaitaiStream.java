@@ -82,6 +82,7 @@ public class KaitaiStream {
 
     /**
      * Provide a read-only version of the {@link ByteBuffer} backing the data of this instance.
+     * <p>
      * This way one can access the underlying raw bytes associated with this structure, but it is
      * important to note that the caller needs to know what this raw data is: Depending on the
      * hierarchy of user types, how the format has been described and how a user type is actually
@@ -94,10 +95,21 @@ public class KaitaiStream {
      * which the associated type was parsed, because the underlying {@link ByteBuffer} might
      * contain the data of all parent types and such as well and not only the one the caller is
      * actually interested in.
+     * </p>
+     * <p>
+     * The returned {@link ByteBuffer} is always rewinded to position 0, because this stream was
+     * most likely used to parse a type already, in which case the former position would have been
+     * at the end of the buffer. Such a position doesn't help a common reading user much and that
+     * fact can easily be forgotten, repositioning to another index than the start is pretty easy
+     * as well. Rewinding/repositioning doesn't even harm performance in any way.
+     * </p>
      * @return read-only {@link ByteBuffer} to access raw data for the associated type.
      */
     public ByteBuffer asRoBuffer() {
-      return this.bb.asReadOnlyBuffer();
+        ByteBuffer retVal = this.bb.asReadOnlyBuffer();
+        retVal.rewind();
+
+        return retVal;
     }
 
     /**
