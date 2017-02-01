@@ -265,6 +265,11 @@ public class KaitaiStream {
 
     //region Unaligned bit values
 
+    public void alignToByte() {
+        bits = 0;
+        bitsLeft = 0;
+    }
+
     public long readBitsInt(int n) {
         int bitsNeeded = n - bitsLeft;
         if (bitsNeeded > 0) {
