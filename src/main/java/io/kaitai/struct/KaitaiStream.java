@@ -362,6 +362,28 @@ public class KaitaiStream {
         return buf;
     }
 
+    public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        while (true) {
+            if (!bb.hasRemaining()) {
+                if (eosError) {
+                    throw new RuntimeException("End of stream reached, but no terminator " + term + " found");
+                } else {
+                    return buf.toByteArray();
+                }
+            }
+            int c = bb.get();
+            if (c == term) {
+                if (includeTerm)
+                    buf.write(c);
+                if (!consumeTerm)
+                    bb.position(bb.position() - 1);
+                return buf.toByteArray();
+            }
+            buf.write(c);
+        }
+    }
+
     /**
      * Checks that next bytes in the stream match match expected fixed byte array.
      * It does so by determining number of bytes to compare, reading them, and doing
@@ -378,39 +400,21 @@ public class KaitaiStream {
         return actual;
     }
 
-    //endregion
-
-    //region Strings
-
-    public String readStrEos(String encoding) {
-        return new String(readBytesFull(), Charset.forName(encoding));
+    public static byte[] bytesStripRight(byte[] bytes, byte padByte) {
+        int newLen = bytes.length;
+        while (bytes[newLen - 1] == padByte && newLen > 0)
+            newLen--;
+        return Arrays.copyOf(bytes, newLen);
     }
 
-    public String readStrByteLimit(long len, String encoding) {
-        return new String(readBytes(len), Charset.forName(encoding));
-    }
-
-    public String readStrz(String encoding, int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
-        ByteArrayOutputStream buf = new ByteArrayOutputStream();
-        Charset cs = Charset.forName(encoding);
-        while (true) {
-            if (!bb.hasRemaining()) {
-                if (eosError) {
-                    throw new RuntimeException("End of stream reached, but no terminator " + term + " found");
-                } else {
-                    return new String(buf.toByteArray(), cs);
-                }
-            }
-            int c = bb.get();
-            if (c == term) {
-                if (includeTerm)
-                    buf.write(c);
-                if (!consumeTerm)
-                    bb.position(bb.position() - 1);
-                return new String(buf.toByteArray(), cs);
-            }
-            buf.write(c);
-        }
+    public static byte[] bytesTerminate(byte[] bytes, byte term, boolean includeTerm) {
+        int newLen = 0;
+        int maxLen = bytes.length;
+        while (bytes[newLen] != term && newLen < maxLen)
+            newLen++;
+        if (includeTerm && newLen < maxLen)
+            newLen++;
+        return Arrays.copyOf(bytes, newLen);
     }
 
     //endregion
