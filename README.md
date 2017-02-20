@@ -8,9 +8,9 @@ formats, network stream packet formats, etc.
 
 Further reading:
 
-* [About Kaitai Struct](https://github.com/kaitai-io/kaitai_struct/)
-* [About API implemented in this library](https://github.com/kaitai-io/kaitai_struct/wiki/Kaitai-Struct-stream-API)
-* [Java-specific notes](https://github.com/kaitai-io/kaitai_struct/wiki/Java)
+* [About Kaitai Struct](http://kaitai.io/)
+* [About API implemented in this library](http://doc.kaitai.io/stream_api.html)
+* [Java-specific notes](http://doc.kaitai.io/lang_java.html)
 
 ## Licensing
 
