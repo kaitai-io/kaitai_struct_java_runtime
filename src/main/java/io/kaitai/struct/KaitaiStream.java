@@ -311,24 +311,33 @@ public class KaitaiStream {
             byte[] buf = readBytes(bytesNeeded);
             for (byte b : buf) {
                 bits <<= 8;
-                bits |= b;
+                // b is signed byte, convert to unsigned using "& 0xff" trick
+                bits |= (b & 0xff);
                 bitsLeft += 8;
             }
         }
 
         // raw mask with required number of 1s, starting from lowest bit
-        long mask = (1 << n) - 1;
+        long mask = getMaskOnes(n);
         // shift mask to align with highest bits available in "bits"
         int shiftBits = bitsLeft - n;
         mask <<= shiftBits;
         // derive reading result
-        long res = (bits & mask) >> shiftBits;
+        long res = (bits & mask) >>> shiftBits;
         // clear top bits that we've just read => AND with 1s
         bitsLeft -= n;
-        mask = (1 << bitsLeft) - 1;
+        mask = getMaskOnes(bitsLeft);
         bits &= mask;
 
         return res;
+    }
+
+    private static long getMaskOnes(int n) {
+        if (n == 64) {
+            return 0xffffffffffffffffL;
+        } else {
+            return (1L << n) - 1;
+        }
     }
 
     //endregion
