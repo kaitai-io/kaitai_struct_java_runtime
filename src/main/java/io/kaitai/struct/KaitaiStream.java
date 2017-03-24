@@ -164,6 +164,8 @@ public class KaitaiStream {
 
     //endregion
 
+    //region Reading
+
     //region Integer numbers
 
     //region Signed
@@ -424,6 +426,153 @@ public class KaitaiStream {
             newLen++;
         return Arrays.copyOf(bytes, newLen);
     }
+
+    //endregion
+
+    //endregion
+
+    //region Writing
+
+    //region Integer numbers
+
+    //region Signed
+
+    /**
+     * Writes one signed 1-byte integer.
+     */
+    public void writeS1(byte v) {
+        bb.put(v);
+    }
+
+    //region Big-endian
+
+    public void writeS2be(short v) {
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putShort(v);
+    }
+
+    public void writeS4be(int v) {
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putInt(v);
+    }
+
+    public void writeS8be(long v) {
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putLong(v);
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    public void writeS2le(short v) {
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putShort(v);
+    }
+
+    public void writeS4le(int v) {
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putInt(v);
+    }
+
+    public void writeS8le(long v) {
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putLong(v);
+    }
+
+    //endregion
+
+    //endregion
+
+    //region Unsigned
+
+    public void writeU1(int v) {
+        bb.put((byte) v);
+    }
+
+    //region Big-endian
+
+    public void writeU2be(int v) {
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putShort((short) v);
+    }
+
+    public void writeU4be(long v) {
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putInt((int) v);
+    }
+
+    public void writeU8be(long v) {
+        writeS8be(v);
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    public void writeU2le(int v) {
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putShort((short) v);
+    }
+
+    public void writeU4le(long v) {
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putInt((int) v);
+    }
+
+    public void writeU8le(long v) {
+        writeS8le(v);
+    }
+
+    //endregion
+
+    //endregion
+
+    //endregion
+
+    //region Floating point numbers
+
+    //region Big-endian
+
+    public void writeF4be(float v) {
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putFloat(v);
+    }
+
+    public void writeF8be(double v) {
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putDouble(v);
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    public void writeF4le(float v) {
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putFloat(v);
+    }
+
+    public void writeF8le(double v) {
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putDouble(v);
+    }
+
+    //endregion
+
+    //endregion
+
+    //region Byte arrays
+
+    /**
+     * Writes given byte array to the stream.
+     * @param buf byte array to write
+     */
+    public void writeBytes(byte[] buf) {
+        bb.put(buf);
+    }
+
+    //endregion
 
     //endregion
 
