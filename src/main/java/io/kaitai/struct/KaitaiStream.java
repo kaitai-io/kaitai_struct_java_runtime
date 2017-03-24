@@ -515,6 +515,80 @@ public class KaitaiStream {
         return baos.toByteArray();
     }
 
+    /**
+     * Create string representation from packed BCD, taking endianness of the given data and what
+     * the caller expects as the human read-order of the decimal into account. The results are ASCII
+     * encoded bytes, which need to be converted back to a proper string afterwards, simply because
+     * currently all {@code process} statements provide {@code byte[]}.
+     * @param data Source data to process.
+     * @param isLittleEndian Endianness associated with the underlying type.
+     * @param needsLeftToRight Read direction of the created string decimal.
+     * @return {@code byte[]} of the created string representation, with each decimal being one {@code byte}.
+     */
+    public static byte[] processBcdToStr(byte[]     data,
+                                         boolean    isLittleEndian,
+                                         boolean    needsLeftToRight) {
+        StringBuilder   sb      = new StringBuilder(data.length * 2);
+        boolean         insert  = false;
+
+        if (( isLittleEndian &&  needsLeftToRight) ||
+            (!isLittleEndian && !needsLeftToRight)) {
+            insert = true;
+        }
+
+        for (byte element : data) {
+            String pair = String.format("%02x", element);
+
+            if (insert) {
+                sb.insert(0, pair);
+            }
+            else {
+                sb.append(pair);
+            }
+        }
+
+        String  retValStr   = sb.toString();
+        byte[]  retVal      = retValStr.getBytes();
+
+        return retVal;
+    }
+
+    /**
+     * Create 2-complement representation from packed BCD, so that callers can read numeric decimals
+     * using e.g. {@link #readU2le()} instead of strings.
+     * @param data Source data to process.
+     * @param isLittleEndian Endianness associated with the underlying type.
+     * @return {@code byte[]} with raw binary decimal.
+     */
+    public static byte[] processBcdToDecimal(   byte[]  data,
+                                                boolean isLittleEndian) {
+        byte[]      strDecimal  = KaitaiStream.processBcdToStr(data, isLittleEndian, true);
+        String      retValStr   = new String(strDecimal);
+        byte[]      retVal      = new byte[data.length];
+        ByteOrder   retValBo    = isLittleEndian ?  ByteOrder.LITTLE_ENDIAN :
+                                                    ByteOrder.BIG_ENDIAN;
+        ByteBuffer  retValBb    = ByteBuffer.wrap (retVal)
+                                            .order(retValBo);
+
+        switch (data.length) {
+            case 1:
+                retValBb.put(Byte.parseByte(retValStr));
+            break;
+            case 2:
+                retValBb.putShort(Short.parseShort(retValStr));
+            break;
+            case 4:
+                retValBb.putInt(Integer.parseInt(retValStr));
+            break;
+            case 8:
+                retValBb.putLong(Long.parseLong(retValStr));
+            break;
+            default: throw new UnsupportedOperationException(data.length + " is an unsupported size currently.");
+        }
+
+        return retVal;
+    }
+
     //endregion
 
     //region Misc runtime operations
