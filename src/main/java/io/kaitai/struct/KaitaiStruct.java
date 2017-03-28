@@ -38,4 +38,15 @@ public class KaitaiStruct {
     }
 
     public KaitaiStream _io() { return _io; }
+
+    public interface Readable {
+        KaitaiStream _io();
+        void _read();
+    }
+
+    public interface Writable {
+        KaitaiStream _io();
+        void _write();
+        void _write(KaitaiStream io);
+    }
 }
