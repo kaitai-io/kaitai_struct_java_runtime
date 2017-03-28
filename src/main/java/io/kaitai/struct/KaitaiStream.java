@@ -80,6 +80,19 @@ public class KaitaiStream {
     }
 
     /**
+     * Initializes a stream that will write data into fixed byte buffer in
+     * memory.
+     * @param size size of buffer in bytes
+     */
+    public KaitaiStream(long size) {
+        if (size > Integer.MAX_VALUE) {
+            throw new RuntimeException("Java ByteBuffer can't be longer than Integer.MAX_VALUE");
+        }
+        fc = null;
+        bb = ByteBuffer.allocate((int) size);
+    }
+
+    /**
      * Provide a read-only version of the {@link ByteBuffer} backing the data of this instance.
      * <p>
      * This way one can access the underlying raw bytes associated with this structure, but it is
@@ -570,6 +583,28 @@ public class KaitaiStream {
      */
     public void writeBytes(byte[] buf) {
         bb.put(buf);
+    }
+
+    public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte) {
+        int len = buf.length;
+        bb.put(buf);
+        if (len < size) {
+            bb.put(term);
+            long padLen = size - len - 1;
+            for (long i = 0; i < padLen; i++)
+                bb.put(padByte);
+        } else if (len > size) {
+            throw new IllegalArgumentException(
+                    "Writing " + size + " bytes, but " + len + " bytes were given"
+            );
+        }
+    }
+
+    public void writeStream(KaitaiStream other) {
+        long otherPos = other.pos();
+        other.seek(0);
+        bb.put(other.bb);
+        other.seek(otherPos);
     }
 
     //endregion
