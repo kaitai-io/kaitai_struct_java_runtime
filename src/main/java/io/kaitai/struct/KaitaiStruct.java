@@ -39,11 +39,20 @@ public class KaitaiStruct {
 
     public KaitaiStream _io() { return _io; }
 
+    /**
+     * Interface that should be implemented by a KaitaiStruct objects
+     * that support reading from a supplied stream object.
+     */
     public interface Readable {
         KaitaiStream _io();
         void _read();
     }
 
+    /**
+     * Interface that should be implemented by a KaitaiStruct objects
+     * that support writing to a pre-supplied stream object or to a
+     * stream object given explicitly.
+     */
     public interface Writable {
         KaitaiStream _io();
         void _write();
