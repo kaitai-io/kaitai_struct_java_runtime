@@ -124,6 +124,14 @@ public class KaitaiStream {
         return retVal;
     }
 
+    public byte[] toByteArray() {
+        long pos = pos();
+        seek(0);
+        byte[] r = readBytesFull();
+        seek(pos);
+        return r;
+    }
+
     /**
      * Closes the stream safely. If there was an open file associated with it, closes that file.
      * For streams that were reading from in-memory array, does nothing.
