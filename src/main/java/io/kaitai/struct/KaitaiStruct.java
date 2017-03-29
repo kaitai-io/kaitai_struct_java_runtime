@@ -40,22 +40,45 @@ public class KaitaiStruct {
     public KaitaiStream _io() { return _io; }
 
     /**
-     * Interface that should be implemented by a KaitaiStruct objects
-     * that support reading from a supplied stream object.
+     * KaitaiStruct object that supports reading from a supplied stream object.
      */
-    public interface Readable {
-        KaitaiStream _io();
-        void _read();
+    public abstract static class ReadOnly extends KaitaiStruct {
+        public ReadOnly(KaitaiStream _io) {
+            super(_io);
+        }
+        public abstract void _read();
     }
 
     /**
-     * Interface that should be implemented by a KaitaiStruct objects
-     * that support writing to a pre-supplied stream object or to a
-     * stream object given explicitly.
+     * KaitaiStruct object that supports both reading from a given stream
+     * object, and writing to a pre-supplied stream object or to a
+     * stream object given explicitly. This also defines a few useful
+     * shortcut methods.
      */
-    public interface Writable {
-        KaitaiStream _io();
-        void _write();
-        void _write(KaitaiStream io);
+    public abstract static class ReadWrite extends ReadOnly {
+        public ReadWrite(KaitaiStream _io) {
+            super(_io);
+        }
+        public abstract void _write();
+        public void _write(KaitaiStream io) {
+            if (this._io == null)
+                this._io = io;
+            _write();
+        }
+
+        /**
+         * Serializes current state of this object into byte array. Internally,
+         * creates a fresh growable KaitaiStream, writes object's state into
+         * it, and then converts it into byte array.
+         * @return serialized object state
+         */
+        public byte[] _toByteArray() {
+            KaitaiStream oldIo = _io;
+            _io = new KaitaiStream(100000);
+            _write();
+            byte[] r = _io.toByteArray();
+            _io = oldIo;
+            return r;
+        }
     }
 }
