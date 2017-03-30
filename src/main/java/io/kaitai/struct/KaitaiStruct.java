@@ -60,6 +60,8 @@ public class KaitaiStruct {
             super(_io);
         }
         public abstract void _write();
+        public abstract void _check();
+
         public void _write(KaitaiStream io) {
             if (this._io == null)
                 this._io = io;
