@@ -553,6 +553,35 @@ public class KaitaiStream {
         return r;
     }
 
+    /**
+     * Compares two byte arrays in lexicographical order. Makes extra effort
+     * to compare bytes properly, as *unsigned* bytes, i.e. [0x90] would be
+     * greater than [0x10].
+     * @param a first byte array to compare
+     * @param b second byte array to compare
+     * @return -1 if a < b, 0 if a == b, 1 if a > b
+     * @see Comparable#compareTo(Object)
+     */
+    public static int byteArrayCompare(byte[] a, byte[] b) {
+        if (a == b)
+            return 0;
+        int al = a.length;
+        int bl = b.length;
+        int minLen = Math.min(al, bl);
+        for (int i = 0; i < minLen; i++) {
+            int cmp = (a[i] & 0xff) - (b[i] & 0xff);
+            if (cmp != 0)
+                return cmp;
+        }
+
+        // Reached the end of at least one of the arrays
+        if (al == bl) {
+            return 0;
+        } else {
+            return al - bl;
+        }
+    }
+
     //endregion
 
     /**
