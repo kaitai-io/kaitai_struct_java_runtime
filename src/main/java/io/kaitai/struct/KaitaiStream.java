@@ -559,7 +559,7 @@ public class KaitaiStream {
      * greater than [0x10].
      * @param a first byte array to compare
      * @param b second byte array to compare
-     * @return negative number if a < b, 0 if a == b, positive number if a > b
+     * @return negative number if a &lt; b, 0 if a == b, positive number if a &gt; b
      * @see Comparable#compareTo(Object)
      */
     public static int byteArrayCompare(byte[] a, byte[] b) {
