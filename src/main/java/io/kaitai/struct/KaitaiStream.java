@@ -80,6 +80,15 @@ public class KaitaiStream {
     }
 
     /**
+     * Initializes a stream that will get data from given ByteBuffer when read.
+     * @param buffer ByteBuffer to read
+     */
+    public KaitaiStream(ByteBuffer buffer) {
+        fc = null;
+        bb = buffer;
+    }
+
+    /**
      * Provide a read-only version of the {@link ByteBuffer} backing the data of this instance.
      * <p>
      * This way one can access the underlying raw bytes associated with this structure, but it is
