@@ -615,4 +615,11 @@ public class KaitaiStream {
             return sb.toString();
         }
     }
+
+    /**
+     * Error that occurs when default endianness should be decided with a
+     * switch, but nothing matches (although using endianness expression
+     * implies that there should be some positive result).
+     */
+    public static class UndecidedEndiannessError extends RuntimeException {}
 }
