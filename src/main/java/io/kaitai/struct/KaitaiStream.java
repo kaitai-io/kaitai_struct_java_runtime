@@ -601,7 +601,7 @@ public class KaitaiStream {
         public UnexpectedDataError(byte[] actual, byte[] expected) {
             super(
                     "Unexpected fixed contents: got " + byteArrayToHex(actual) +
-                    " , was waiting for " + byteArrayToHex(expected)
+                    ", was waiting for " + byteArrayToHex(expected)
             );
         }
 
