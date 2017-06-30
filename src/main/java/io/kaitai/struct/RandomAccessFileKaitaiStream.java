@@ -284,12 +284,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public byte[] readBytes(long n) {
-        if (n > Integer.MAX_VALUE) {
-            throw new RuntimeException(
-                    "Java byte arrays can be indexed only up to 31 bits, but " + n + " size was requested"
-            );
-        }
-        byte[] buf = new byte[(int) n];
+        byte[] buf = new byte[toByteArrayLength(n)];
         try {
             int readCount = raf.read(buf);
             if (readCount < n) {

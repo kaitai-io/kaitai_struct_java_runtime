@@ -282,6 +282,26 @@ public abstract class KaitaiStream {
         return Arrays.copyOf(bytes, newLen);
     }
 
+    /**
+     * Checks if supplied number of bytes is a valid number of elements for Java
+     * byte array: converts it to int, if it is, or throws an exception if it is not.
+     * @param n number of bytes for byte array as long
+     * @return number of bytes, converted to int
+     */
+    protected int toByteArrayLength(long n) {
+        if (n > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "Java byte arrays can be indexed only up to 31 bits, but " + n + " size was requested"
+            );
+        }
+        if (n < 0) {
+            throw new IllegalArgumentException(
+                    "Byte array size can't be negative, but " + n + " size was requested"
+            );
+        }
+        return (int) n;
+    }
+
     //endregion
 
     //region Byte array processing

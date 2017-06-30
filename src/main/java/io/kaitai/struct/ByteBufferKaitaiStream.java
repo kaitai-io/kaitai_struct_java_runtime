@@ -106,7 +106,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     @Override
     public void seek(long newPos) {
         if (newPos > Integer.MAX_VALUE) {
-            throw new RuntimeException("Java ByteBuffer can't be seeked past Integer.MAX_VALUE");
+            throw new IllegalArgumentException("Java ByteBuffer can't be seeked past Integer.MAX_VALUE");
         }
         bb.position((int) newPos);
     }
@@ -270,12 +270,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public byte[] readBytes(long n) {
-        if (n > Integer.MAX_VALUE) {
-            throw new RuntimeException(
-                    "Java byte arrays can be indexed only up to 31 bits, but " + n + " size was requested"
-            );
-        }
-        byte[] buf = new byte[(int) n];
+        byte[] buf = new byte[toByteArrayLength(n)];
         bb.get(buf);
         return buf;
     }
