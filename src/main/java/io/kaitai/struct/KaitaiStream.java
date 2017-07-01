@@ -25,20 +25,14 @@ package io.kaitai.struct;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.FileChannel;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 /**
- * KaitaiStream is an implementation of
+ * KaitaiStream provides implementation of
  * <a href="https://github.com/kaitai-io/kaitai_struct/wiki/Kaitai-Struct-stream-API">Kaitai Struct stream API</a>
- * for Java. Internally, it uses a ByteBuffer (either a MappedByteBuffer
- * backed by FileChannel, or a regular wrapper over a given byte array).
+ * for Java.
  *
  * It provides a wide variety of simple methods to read (parse) binary
  * representations of primitive types, such as integer and floating
@@ -46,89 +40,27 @@ import java.util.zip.Inflater;
  * positioning / navigation methods with unified cross-language and
  * cross-toolkit semantics.
  *
- * Typically, end users won't access Kaitai Stream class manually, but
- * would describe a binary structure format using .ksy language and
- * then would use Kaitai Struct compiler to generate source code in
+ * This is abstract class, which serves as an interface description and
+ * a few default method implementations, which are believed to be common
+ * for all (or at least most) implementations. Different implementations
+ * of this interface may provide way to parse data from local files,
+ * in-memory buffers or arrays, remote files, network streams, etc.
+ *
+ * Typically, end users won't access any of these Kaitai Stream classes
+ * manually, but would describe a binary structure format using .ksy language
+ * and then would use Kaitai Struct compiler to generate source code in
  * desired target language.  That code, in turn, would use this class
  * and API to do the actual parsing job.
  */
-public class KaitaiStream {
-    private final FileChannel fc;
-    private final ByteBuffer bb;
-    private int bitsLeft = 0;
-    private long bits = 0;
+public abstract class KaitaiStream {
+    protected int bitsLeft = 0;
+    protected long bits = 0;
 
     /**
-     * Initializes a stream, reading from a local file with specified fileName.
-     * Internally, FileChannel + MappedByteBuffer will be used.
-     * @param fileName file to read
-     * @throws IOException if file can't be read
+     * Closes the stream safely - i.e. closes the files, network connections, etc, if needed.
+     * @throws IOException
      */
-    public KaitaiStream(String fileName) throws IOException {
-        fc = FileChannel.open(Paths.get(fileName), StandardOpenOption.READ);
-        bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-    }
-
-    /**
-     * Initializes a stream that will get data from given byte array when read.
-     * Internally, ByteBuffer wrapping given array will be used.
-     * @param arr byte array to read
-     */
-    public KaitaiStream(byte[] arr) {
-        fc = null;
-        bb = ByteBuffer.wrap(arr);
-    }
-
-    /**
-     * Initializes a stream that will get data from given ByteBuffer when read.
-     * @param buffer ByteBuffer to read
-     */
-    public KaitaiStream(ByteBuffer buffer) {
-        fc = null;
-        bb = buffer;
-    }
-
-    /**
-     * Provide a read-only version of the {@link ByteBuffer} backing the data of this instance.
-     * <p>
-     * This way one can access the underlying raw bytes associated with this structure, but it is
-     * important to note that the caller needs to know what this raw data is: Depending on the
-     * hierarchy of user types, how the format has been described and how a user type is actually
-     * used, it might be that one accesses all data of some format or only a special substream
-     * view of it. We can't know currently, so one needs to keep that in mind when authoring a KSY
-     * and e.g. use substreams with user types whenever such a type most likely needs to access its
-     * underlying raw data. Using a substream in KSY and directly passing some raw data to a user
-     * type outside of normal KS parse order is equivalent and will provide the same results. If no
-     * substream is used instead, the here provided data might differ depending on the context in
-     * which the associated type was parsed, because the underlying {@link ByteBuffer} might
-     * contain the data of all parent types and such as well and not only the one the caller is
-     * actually interested in.
-     * </p>
-     * <p>
-     * The returned {@link ByteBuffer} is always rewinded to position 0, because this stream was
-     * most likely used to parse a type already, in which case the former position would have been
-     * at the end of the buffer. Such a position doesn't help a common reading user much and that
-     * fact can easily be forgotten, repositioning to another index than the start is pretty easy
-     * as well. Rewinding/repositioning doesn't even harm performance in any way.
-     * </p>
-     * @return read-only {@link ByteBuffer} to access raw data for the associated type.
-     */
-    public ByteBuffer asRoBuffer() {
-        ByteBuffer retVal = this.bb.asReadOnlyBuffer();
-        retVal.rewind();
-
-        return retVal;
-    }
-
-    /**
-     * Closes the stream safely. If there was an open file associated with it, closes that file.
-     * For streams that were reading from in-memory array, does nothing.
-     * @throws IOException if FileChannel can't be closed
-     */
-    public void close() throws IOException {
-        if (fc != null)
-            fc.close();
-    }
+    abstract public void close() throws IOException;
 
     //region Stream positioning
 
@@ -136,40 +68,31 @@ public class KaitaiStream {
      * Check if stream pointer is at the end of stream.
      * @return true if we are located at the end of the stream
      */
-    public boolean isEof() {
-        return !bb.hasRemaining();
-    }
+    abstract public boolean isEof();
 
     /**
-     * Set stream pointer to designated position.
+     * Set stream pointer to designated position (int).
      * @param newPos new position (offset in bytes from the beginning of the stream)
      */
-    public void seek(int newPos) {
-        bb.position(newPos);
-    }
+    abstract public void seek(int newPos);
 
-    public void seek(long newPos) {
-        if (newPos > Integer.MAX_VALUE) {
-            throw new RuntimeException("Java ByteBuffer can't be seeked past Integer.MAX_VALUE");
-        }
-        bb.position((int) newPos);
-    }
+    /**
+     * Set stream pointer to designated position (long).
+     * @param newPos new position (offset in bytes from the beginning of the stream)
+     */
+    abstract public void seek(long newPos);
 
     /**
      * Get current position of a stream pointer.
      * @return pointer position, number of bytes from the beginning of the stream
      */
-    public int pos() {
-        return bb.position();
-    }
+    abstract public int pos();
 
     /**
      * Get total size of the stream in bytes.
      * @return size of the stream in bytes
      */
-    public long size() {
-        return bb.limit();
-    }
+    abstract public long size();
 
     //endregion
 
@@ -181,45 +104,21 @@ public class KaitaiStream {
      * Reads one signed 1-byte integer, returning it properly as Java's "byte" type.
      * @return 1-byte integer read from a stream
      */
-    public byte readS1() {
-        return bb.get();
-    }
+    abstract public byte readS1();
 
     //region Big-endian
 
-    public short readS2be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getShort();
-    }
-
-    public int readS4be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getInt();
-    }
-
-    public long readS8be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getLong();
-    }
+    abstract public short readS2be();
+    abstract public int readS4be();
+    abstract public long readS8be();
 
     //endregion
 
     //region Little-endian
 
-    public short readS2le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getShort();
-    }
-
-    public int readS4le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getInt();
-    }
-
-    public long readS8le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getLong();
-    }
+    abstract public short readS2le();
+    abstract public int readS4le();
+    abstract public long readS8le();
 
     //endregion
 
@@ -227,22 +126,19 @@ public class KaitaiStream {
 
     //region Unsigned
 
-    public int readU1() {
-        return bb.get() & 0xff;
-    }
+    abstract public int readU1();
 
     //region Big-endian
 
-    public int readU2be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getShort() & 0xffff;
-    }
+    abstract public int readU2be();
 
-    public long readU4be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getInt() & 0xffffffffL;
-    }
+    abstract public long readU4be();
 
+    /**
+     * Reads one unsigned 8-byte integer in big-endian encoding. As Java does not
+     * have a primitive data type to accomodate it, we just reuse {@link #readS8be()}.
+     * @return 8-byte signed integer (pretending to be unsigned) read from a stream
+     */
     public long readU8be() {
         return readS8be();
     }
@@ -251,16 +147,15 @@ public class KaitaiStream {
 
     //region Little-endian
 
-    public int readU2le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getShort() & 0xffff;
-    }
+    abstract public int readU2le();
 
-    public long readU4le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getInt() & 0xffffffffL;
-    }
+    abstract public long readU4le();
 
+    /**
+     * Reads one unsigned 8-byte integer in little-endian encoding. As Java does not
+     * have a primitive data type to accomodate it, we just reuse {@link #readS8le()}.
+     * @return 8-byte signed integer (pretending to be unsigned) read from a stream
+     */
     public long readU8le() {
         return readS8le();
     }
@@ -275,29 +170,15 @@ public class KaitaiStream {
 
     //region Big-endian
 
-    public float readF4be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getFloat();
-    }
-
-    public double readF8be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getDouble();
-    }
+    abstract public float readF4be();
+    abstract public double readF8be();
 
     //endregion
 
     //region Little-endian
 
-    public float readF4le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getFloat();
-    }
-
-    public double readF8le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getDouble();
-    }
+    abstract public float readF4le();
+    abstract public double readF8le();
 
     //endregion
 
@@ -358,48 +239,15 @@ public class KaitaiStream {
      * @param n number of bytes to read
      * @return read bytes as byte array
      */
-    public byte[] readBytes(long n) {
-        if (n > Integer.MAX_VALUE) {
-            throw new RuntimeException(
-                    "Java byte arrays can be indexed only up to 31 bits, but " + n + " size was requested"
-            );
-        }
-        byte[] buf = new byte[(int) n];
-        bb.get(buf);
-        return buf;
-    }
+    abstract public byte[] readBytes(long n);
 
     /**
      * Reads all the remaining bytes in a stream as byte array.
      * @return all remaining bytes in a stream as byte array
      */
-    public byte[] readBytesFull() {
-        byte[] buf = new byte[bb.remaining()];
-        bb.get(buf);
-        return buf;
-    }
+    abstract public byte[] readBytesFull();
 
-    public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
-        ByteArrayOutputStream buf = new ByteArrayOutputStream();
-        while (true) {
-            if (!bb.hasRemaining()) {
-                if (eosError) {
-                    throw new RuntimeException("End of stream reached, but no terminator " + term + " found");
-                } else {
-                    return buf.toByteArray();
-                }
-            }
-            int c = bb.get();
-            if (c == term) {
-                if (includeTerm)
-                    buf.write(c);
-                if (!consumeTerm)
-                    bb.position(bb.position() - 1);
-                return buf.toByteArray();
-            }
-            buf.write(c);
-        }
-    }
+    abstract public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError);
 
     /**
      * Checks that next bytes in the stream match match expected fixed byte array.
@@ -432,6 +280,26 @@ public class KaitaiStream {
         if (includeTerm && newLen < maxLen)
             newLen++;
         return Arrays.copyOf(bytes, newLen);
+    }
+
+    /**
+     * Checks if supplied number of bytes is a valid number of elements for Java
+     * byte array: converts it to int, if it is, or throws an exception if it is not.
+     * @param n number of bytes for byte array as long
+     * @return number of bytes, converted to int
+     */
+    protected int toByteArrayLength(long n) {
+        if (n > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "Java byte arrays can be indexed only up to 31 bits, but " + n + " size was requested"
+            );
+        }
+        if (n < 0) {
+            throw new IllegalArgumentException(
+                    "Byte array size can't be negative, but " + n + " size was requested"
+            );
+        }
+        return (int) n;
     }
 
     //endregion
