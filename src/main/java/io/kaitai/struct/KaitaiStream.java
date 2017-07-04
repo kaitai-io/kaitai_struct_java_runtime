@@ -267,7 +267,7 @@ public abstract class KaitaiStream {
 
     public static byte[] bytesStripRight(byte[] bytes, byte padByte) {
         int newLen = bytes.length;
-        while (bytes[newLen - 1] == padByte && newLen > 0)
+        while (newLen > 0 && bytes[newLen - 1] == padByte)
             newLen--;
         return Arrays.copyOf(bytes, newLen);
     }
