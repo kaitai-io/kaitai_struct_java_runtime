@@ -24,6 +24,7 @@
 package io.kaitai.struct;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.zip.DataFormatException;
@@ -52,7 +53,7 @@ import java.util.zip.Inflater;
  * desired target language.  That code, in turn, would use this class
  * and API to do the actual parsing job.
  */
-public abstract class KaitaiStream {
+public abstract class KaitaiStream implements Closeable {
     protected int bitsLeft = 0;
     protected long bits = 0;
 
