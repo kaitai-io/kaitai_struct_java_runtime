@@ -11,13 +11,13 @@ import java.nio.ByteOrder;
  * An implementation of {@link KaitaiStream} backed by a {@link RandomAccessFile}.
  *
  * Allows reading from local files. Generally, one would want to use
- * {@link ByteBufferKaitaiStream} instead, as it is most likely would be faster,
- * but there are two situation when one should consider this one instead:
+ * {@link ByteBufferKaitaiStream} instead, as it most likely would be faster,
+ * but there are two situations when one should consider this one instead:
  *
  * <ul>
  * <li>Processing many small files. Every ByteBuffer invocation requires a mmap
  * call, which can be relatively expensive (per file).</li>
- * <li>Accessing extra-long files (>31 bits positioning). Unfortunately, Java's
+ * <li>Accessing extra-long files (&gt;31 bits positioning). Unfortunately, Java's
  * implementation of mmap uses ByteBuffer, which is not addressable beyond 31 bit
  * offsets, even if you use a 64-bit platform.</li>
  * </ul>
@@ -263,7 +263,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     public double readF8be() {
         return wrapBufferBe(8).getDouble();
     }
-    
+
     //endregion
 
     //region Little-endian
