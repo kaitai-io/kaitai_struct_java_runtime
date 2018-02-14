@@ -57,10 +57,7 @@ public abstract class KaitaiStream implements Closeable {
     protected int bitsLeft = 0;
     protected long bits = 0;
 
-    /**
-     * Closes the stream safely - i.e. closes the files, network connections, etc, if needed.
-     * @throws IOException
-     */
+    @Override
     abstract public void close() throws IOException;
 
     //region Stream positioning
