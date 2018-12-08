@@ -15,8 +15,8 @@ import java.nio.file.StandardOpenOption;
  * or a regular wrapper over a given byte array).
  */
 public class ByteBufferKaitaiStream extends KaitaiStream {
-    private final FileChannel fc;
-    private final ByteBuffer bb;
+    private FileChannel fc;
+    private ByteBuffer bb;
 
     /**
      * Initializes a stream, reading from a local file with specified fileName.
@@ -83,12 +83,39 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     /**
      * Closes the stream safely. If there was an open file associated with it, closes that file.
      * For streams that were reading from in-memory array, does nothing.
+     * <p>
+     * @implNote Unfortunately, there is no simple way to close memory-mapped ByteBuffer in
+     * Java and unmap underlying file. As {@link MappedByteBuffer} documentation suggests,
+     * "mapped byte buffer and the file mapping that it represents remain valid until the
+     * buffer itself is garbage-collected". Thus, the best we can do is to delete all
+     * references to it, which breaks all subsequent <code>read..</code> methods with
+     * {@link NullPointerException}. Afterwards, a call to {@link System#gc()} will
+     * typically release the mmap, if garbage collection will be triggered.
+     * </p>
+     * <p>
+     * There is a <a href="https://bugs.java.com/bugdatabase/view_bug.do?bug_id=4724038">
+     * JDK-4724038 request for adding unmap method</a> filed at Java bugtracker since 2002,
+     * but as of 2018, it is still unresolved.
+     * </p>
+     * <p>
+     * A couple of unsafe approaches (such as using JNI, or using reflection to invoke JVM
+     * internal APIs) have been suggested and used with some success, but these are either
+     * unportable or dangerous (may crash JVM), so we're not using them in this general
+     * purpose code.
+     * </p>
+     * <p>
+     * For more examples and suggestions, see:
+     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-filechannel-in-java
+     * </p>
      * @throws IOException if FileChannel can't be closed
      */
     @Override
     public void close() throws IOException {
-        if (fc != null)
+        if (fc != null) {
             fc.close();
+            fc = null;
+        }
+        bb = null;
     }
 
     //region Stream positioning
