@@ -14,7 +14,7 @@ Further reading:
 
 ## Licensing
 
-Copyright 2015-2017 Kaitai Project: MIT license
+Copyright 2015-2019 Kaitai Project: MIT license
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

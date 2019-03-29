@@ -37,7 +37,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     @Override
     public boolean isEof() {
         try {
-            return !(raf.getFilePointer() < raf.length());
+            return !(raf.getFilePointer() < raf.length() || bitsLeft > 0);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

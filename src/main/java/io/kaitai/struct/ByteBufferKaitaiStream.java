@@ -122,7 +122,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public boolean isEof() {
-        return !bb.hasRemaining();
+        return !(bb.hasRemaining() || bitsLeft > 0);
     }
 
     @Override
