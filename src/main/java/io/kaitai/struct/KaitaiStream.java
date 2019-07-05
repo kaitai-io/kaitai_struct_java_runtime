@@ -488,4 +488,59 @@ public abstract class KaitaiStream implements Closeable {
      * implies that there should be some positive result).
      */
     public static class UndecidedEndiannessError extends RuntimeException {}
+
+    /**
+     * Common ancestor for all error originating from Kaitai Struct usage.
+     * Stores KSY source path, pointing to an element supposedly guilty of
+     * an error.
+     */
+    public static class KaitaiStructError extends RuntimeException {
+        public KaitaiStructError(String msg, String srcPath) {
+            super(srcPath + ": " + msg);
+            this.srcPath = srcPath;
+        }
+
+        protected String srcPath;
+    }
+
+    /**
+     * Common ancestor for all validation failures. Stores pointer to
+     * KaitaiStream IO object which was involved in an error.
+     */
+    public static class ValidationFailedError extends KaitaiStructError {
+        public ValidationFailedError(String msg, KaitaiStream io, String srcPath) {
+            super("at pos " + io.pos() + ": validation failed: " + msg, srcPath);
+            this.io = io;
+        }
+
+        protected KaitaiStream io;
+
+        protected static String byteArrayToHex(byte[] arr) {
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < arr.length; i++) {
+                if (i > 0)
+                    sb.append(' ');
+                sb.append(String.format("%02x", arr[i]));
+            }
+            sb.append(']');
+            return sb.toString();
+        }
+    }
+
+    /**
+     * Signals validation failure: we required "actual" value to be equal to
+     * "expected", but it turned out that it's not.
+     */
+    public static class ValidationNotEqualError extends ValidationFailedError {
+        public ValidationNotEqualError(byte[] expected, byte[] actual, KaitaiStream io, String srcPath) {
+            super("not equal, expected " + byteArrayToHex(expected) + ", but got " + byteArrayToHex(actual), io, srcPath);
+        }
+
+        public ValidationNotEqualError(Object expected, Object actual, KaitaiStream io, String srcPath) {
+            super("not equal, expected " + expected + ", but got " + actual, io, srcPath);
+        }
+
+        protected Object expected;
+        protected Object actual;
+    }
 }
