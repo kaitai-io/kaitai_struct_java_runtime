@@ -457,6 +457,38 @@ public abstract class KaitaiStream implements Closeable {
         }
     }
 
+    /**
+     * Finds the minimal byte in a byte array, treating bytes as
+     * unsigned values.
+     * @param b byte array to scan
+     * @return minimal byte in byte array as integer
+     */
+    public static int byteArrayMin(byte[] b) {
+        int min = Integer.MAX_VALUE;
+        for (int i = 0; i < b.length; i++) {
+            int value = b[i] & 0xff;
+            if (value < min)
+                min = value;
+        }
+        return min;
+    }
+
+    /**
+     * Finds the maximal byte in a byte array, treating bytes as
+     * unsigned values.
+     * @param b byte array to scan
+     * @return maximal byte in byte array as integer
+     */
+    public static int byteArrayMax(byte[] b) {
+        int max = 0;
+        for (int i = 0; i < b.length; i++) {
+            int value = b[i] & 0xff;
+            if (value > max)
+                max = value;
+        }
+        return max;
+    }
+
     //endregion
 
     /**
