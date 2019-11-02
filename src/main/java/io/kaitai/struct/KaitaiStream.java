@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Kaitai Project: MIT license
+ * Copyright 2015-2019 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -24,21 +24,17 @@
 package io.kaitai.struct;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.FileChannel;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
+import java.util.zip.Deflater;
 
 /**
- * KaitaiStream is an implementation of
+ * KaitaiStream provides implementation of
  * <a href="https://github.com/kaitai-io/kaitai_struct/wiki/Kaitai-Struct-stream-API">Kaitai Struct stream API</a>
- * for Java. Internally, it uses a ByteBuffer (either a MappedByteBuffer
- * backed by FileChannel, or a regular wrapper over a given byte array).
+ * for Java.
  *
  * It provides a wide variety of simple methods to read (parse) binary
  * representations of primitive types, such as integer and floating
@@ -46,101 +42,24 @@ import java.util.zip.Inflater;
  * positioning / navigation methods with unified cross-language and
  * cross-toolkit semantics.
  *
- * Typically, end users won't access Kaitai Stream class manually, but
- * would describe a binary structure format using .ksy language and
- * then would use Kaitai Struct compiler to generate source code in
+ * This is abstract class, which serves as an interface description and
+ * a few default method implementations, which are believed to be common
+ * for all (or at least most) implementations. Different implementations
+ * of this interface may provide way to parse data from local files,
+ * in-memory buffers or arrays, remote files, network streams, etc.
+ *
+ * Typically, end users won't access any of these Kaitai Stream classes
+ * manually, but would describe a binary structure format using .ksy language
+ * and then would use Kaitai Struct compiler to generate source code in
  * desired target language.  That code, in turn, would use this class
  * and API to do the actual parsing job.
  */
-public class KaitaiStream {
-    private final FileChannel fc;
-    private final ByteBuffer bb;
-    private int bitsLeft = 0;
-    private long bits = 0;
+public abstract class KaitaiStream implements Closeable {
+    protected int bitsLeft = 0;
+    protected long bits = 0;
 
-    /**
-     * Initializes a stream, reading from a local file with specified fileName.
-     * Internally, FileChannel + MappedByteBuffer will be used.
-     * @param fileName file to read
-     * @throws IOException if file can't be read
-     */
-    public KaitaiStream(String fileName) throws IOException {
-        fc = FileChannel.open(Paths.get(fileName), StandardOpenOption.READ);
-        bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-    }
-
-    /**
-     * Initializes a stream that will get data from given byte array when read.
-     * Internally, ByteBuffer wrapping given array will be used.
-     * @param arr byte array to read
-     */
-    public KaitaiStream(byte[] arr) {
-        fc = null;
-        bb = ByteBuffer.wrap(arr);
-    }
-
-    /**
-     * Initializes a stream that will write data into fixed byte buffer in
-     * memory.
-     * @param size size of buffer in bytes
-     */
-    public KaitaiStream(long size) {
-        if (size > Integer.MAX_VALUE) {
-            throw new RuntimeException("Java ByteBuffer can't be longer than Integer.MAX_VALUE");
-        }
-        fc = null;
-        bb = ByteBuffer.allocate((int) size);
-    }
-
-    /**
-     * Provide a read-only version of the {@link ByteBuffer} backing the data of this instance.
-     * <p>
-     * This way one can access the underlying raw bytes associated with this structure, but it is
-     * important to note that the caller needs to know what this raw data is: Depending on the
-     * hierarchy of user types, how the format has been described and how a user type is actually
-     * used, it might be that one accesses all data of some format or only a special substream
-     * view of it. We can't know currently, so one needs to keep that in mind when authoring a KSY
-     * and e.g. use substreams with user types whenever such a type most likely needs to access its
-     * underlying raw data. Using a substream in KSY and directly passing some raw data to a user
-     * type outside of normal KS parse order is equivalent and will provide the same results. If no
-     * substream is used instead, the here provided data might differ depending on the context in
-     * which the associated type was parsed, because the underlying {@link ByteBuffer} might
-     * contain the data of all parent types and such as well and not only the one the caller is
-     * actually interested in.
-     * </p>
-     * <p>
-     * The returned {@link ByteBuffer} is always rewinded to position 0, because this stream was
-     * most likely used to parse a type already, in which case the former position would have been
-     * at the end of the buffer. Such a position doesn't help a common reading user much and that
-     * fact can easily be forgotten, repositioning to another index than the start is pretty easy
-     * as well. Rewinding/repositioning doesn't even harm performance in any way.
-     * </p>
-     * @return read-only {@link ByteBuffer} to access raw data for the associated type.
-     */
-    public ByteBuffer asRoBuffer() {
-        ByteBuffer retVal = this.bb.asReadOnlyBuffer();
-        retVal.rewind();
-
-        return retVal;
-    }
-
-    public byte[] toByteArray() {
-        long pos = pos();
-        seek(0);
-        byte[] r = readBytesFull();
-        seek(pos);
-        return r;
-    }
-
-    /**
-     * Closes the stream safely. If there was an open file associated with it, closes that file.
-     * For streams that were reading from in-memory array, does nothing.
-     * @throws IOException if FileChannel can't be closed
-     */
-    public void close() throws IOException {
-        if (fc != null)
-            fc.close();
-    }
+    @Override
+    abstract public void close() throws IOException;
 
     //region Stream positioning
 
@@ -148,40 +67,31 @@ public class KaitaiStream {
      * Check if stream pointer is at the end of stream.
      * @return true if we are located at the end of the stream
      */
-    public boolean isEof() {
-        return !bb.hasRemaining();
-    }
+    abstract public boolean isEof();
 
     /**
-     * Set stream pointer to designated position.
+     * Set stream pointer to designated position (int).
      * @param newPos new position (offset in bytes from the beginning of the stream)
      */
-    public void seek(int newPos) {
-        bb.position(newPos);
-    }
+    abstract public void seek(int newPos);
 
-    public void seek(long newPos) {
-        if (newPos > Integer.MAX_VALUE) {
-            throw new RuntimeException("Java ByteBuffer can't be seeked past Integer.MAX_VALUE");
-        }
-        bb.position((int) newPos);
-    }
+    /**
+     * Set stream pointer to designated position (long).
+     * @param newPos new position (offset in bytes from the beginning of the stream)
+     */
+    abstract public void seek(long newPos);
 
     /**
      * Get current position of a stream pointer.
      * @return pointer position, number of bytes from the beginning of the stream
      */
-    public int pos() {
-        return bb.position();
-    }
+    abstract public int pos();
 
     /**
      * Get total size of the stream in bytes.
      * @return size of the stream in bytes
      */
-    public long size() {
-        return bb.limit();
-    }
+    abstract public long size();
 
     //endregion
 
@@ -195,45 +105,21 @@ public class KaitaiStream {
      * Reads one signed 1-byte integer, returning it properly as Java's "byte" type.
      * @return 1-byte integer read from a stream
      */
-    public byte readS1() {
-        return bb.get();
-    }
+    abstract public byte readS1();
 
     //region Big-endian
 
-    public short readS2be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getShort();
-    }
-
-    public int readS4be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getInt();
-    }
-
-    public long readS8be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getLong();
-    }
+    abstract public short readS2be();
+    abstract public int readS4be();
+    abstract public long readS8be();
 
     //endregion
 
     //region Little-endian
 
-    public short readS2le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getShort();
-    }
-
-    public int readS4le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getInt();
-    }
-
-    public long readS8le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getLong();
-    }
+    abstract public short readS2le();
+    abstract public int readS4le();
+    abstract public long readS8le();
 
     //endregion
 
@@ -241,22 +127,19 @@ public class KaitaiStream {
 
     //region Unsigned
 
-    public int readU1() {
-        return bb.get() & 0xff;
-    }
+    abstract public int readU1();
 
     //region Big-endian
 
-    public int readU2be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getShort() & 0xffff;
-    }
+    abstract public int readU2be();
 
-    public long readU4be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getInt() & 0xffffffffL;
-    }
+    abstract public long readU4be();
 
+    /**
+     * Reads one unsigned 8-byte integer in big-endian encoding. As Java does not
+     * have a primitive data type to accomodate it, we just reuse {@link #readS8be()}.
+     * @return 8-byte signed integer (pretending to be unsigned) read from a stream
+     */
     public long readU8be() {
         return readS8be();
     }
@@ -265,16 +148,15 @@ public class KaitaiStream {
 
     //region Little-endian
 
-    public int readU2le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getShort() & 0xffff;
-    }
+    abstract public int readU2le();
 
-    public long readU4le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getInt() & 0xffffffffL;
-    }
+    abstract public long readU4le();
 
+    /**
+     * Reads one unsigned 8-byte integer in little-endian encoding. As Java does not
+     * have a primitive data type to accomodate it, we just reuse {@link #readS8le()}.
+     * @return 8-byte signed integer (pretending to be unsigned) read from a stream
+     */
     public long readU8le() {
         return readS8le();
     }
@@ -289,29 +171,15 @@ public class KaitaiStream {
 
     //region Big-endian
 
-    public float readF4be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getFloat();
-    }
-
-    public double readF8be() {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        return bb.getDouble();
-    }
+    abstract public float readF4be();
+    abstract public double readF8be();
 
     //endregion
 
     //region Little-endian
 
-    public float readF4le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getFloat();
-    }
-
-    public double readF8le() {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        return bb.getDouble();
-    }
+    abstract public float readF4le();
+    abstract public double readF8le();
 
     //endregion
 
@@ -372,48 +240,15 @@ public class KaitaiStream {
      * @param n number of bytes to read
      * @return read bytes as byte array
      */
-    public byte[] readBytes(long n) {
-        if (n > Integer.MAX_VALUE) {
-            throw new RuntimeException(
-                    "Java byte arrays can be indexed only up to 31 bits, but " + n + " size was requested"
-            );
-        }
-        byte[] buf = new byte[(int) n];
-        bb.get(buf);
-        return buf;
-    }
+    abstract public byte[] readBytes(long n);
 
     /**
      * Reads all the remaining bytes in a stream as byte array.
      * @return all remaining bytes in a stream as byte array
      */
-    public byte[] readBytesFull() {
-        byte[] buf = new byte[bb.remaining()];
-        bb.get(buf);
-        return buf;
-    }
+    abstract public byte[] readBytesFull();
 
-    public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
-        ByteArrayOutputStream buf = new ByteArrayOutputStream();
-        while (true) {
-            if (!bb.hasRemaining()) {
-                if (eosError) {
-                    throw new RuntimeException("End of stream reached, but no terminator " + term + " found");
-                } else {
-                    return buf.toByteArray();
-                }
-            }
-            int c = bb.get();
-            if (c == term) {
-                if (includeTerm)
-                    buf.write(c);
-                if (!consumeTerm)
-                    bb.position(bb.position() - 1);
-                return buf.toByteArray();
-            }
-            buf.write(c);
-        }
-    }
+    abstract public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError);
 
     /**
      * Checks that next bytes in the stream match match expected fixed byte array.
@@ -433,7 +268,7 @@ public class KaitaiStream {
 
     public static byte[] bytesStripRight(byte[] bytes, byte padByte) {
         int newLen = bytes.length;
-        while (bytes[newLen - 1] == padByte && newLen > 0)
+        while (newLen > 0 && bytes[newLen - 1] == padByte)
             newLen--;
         return Arrays.copyOf(bytes, newLen);
     }
@@ -446,6 +281,26 @@ public class KaitaiStream {
         if (includeTerm && newLen < maxLen)
             newLen++;
         return Arrays.copyOf(bytes, newLen);
+    }
+
+    /**
+     * Checks if supplied number of bytes is a valid number of elements for Java
+     * byte array: converts it to int, if it is, or throws an exception if it is not.
+     * @param n number of bytes for byte array as long
+     * @return number of bytes, converted to int
+     */
+    protected int toByteArrayLength(long n) {
+        if (n > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "Java byte arrays can be indexed only up to 31 bits, but " + n + " size was requested"
+            );
+        }
+        if (n < 0) {
+            throw new IllegalArgumentException(
+                    "Byte array size can't be negative, but " + n + " size was requested"
+            );
+        }
+        return (int) n;
     }
 
     //endregion
@@ -461,45 +316,25 @@ public class KaitaiStream {
     /**
      * Writes one signed 1-byte integer.
      */
-    public void writeS1(byte v) {
-        bb.put(v);
-    }
+    abstract public void writeS1(byte v);
 
     //region Big-endian
 
-    public void writeS2be(short v) {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putShort(v);
-    }
+    abstract public void writeS2be(short v);
 
-    public void writeS4be(int v) {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putInt(v);
-    }
+    abstract public void writeS4be(int v);
 
-    public void writeS8be(long v) {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putLong(v);
-    }
+    abstract public void writeS8be(long v);
 
     //endregion
 
     //region Little-endian
 
-    public void writeS2le(short v) {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putShort(v);
-    }
+    abstract public void writeS2le(short v);
 
-    public void writeS4le(int v) {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putInt(v);
-    }
+    abstract public void writeS4le(int v);
 
-    public void writeS8le(long v) {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putLong(v);
-    }
+    abstract public void writeS8le(long v);
 
     //endregion
 
@@ -507,43 +342,25 @@ public class KaitaiStream {
 
     //region Unsigned
 
-    public void writeU1(int v) {
-        bb.put((byte) v);
-    }
+    abstract public void writeU1(int v);
 
     //region Big-endian
 
-    public void writeU2be(int v) {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putShort((short) v);
-    }
+    abstract public void writeU2be(int v);
 
-    public void writeU4be(long v) {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putInt((int) v);
-    }
+    abstract public void writeU4be(long v);
 
-    public void writeU8be(long v) {
-        writeS8be(v);
-    }
+    abstract public void writeU8be(long v);
 
     //endregion
 
     //region Little-endian
 
-    public void writeU2le(int v) {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putShort((short) v);
-    }
+    abstract public void writeU2le(int v);
 
-    public void writeU4le(long v) {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putInt((int) v);
-    }
+    abstract public void writeU4le(long v);
 
-    public void writeU8le(long v) {
-        writeS8le(v);
-    }
+    abstract public void writeU8le(long v);
 
     //endregion
 
@@ -555,28 +372,51 @@ public class KaitaiStream {
 
     //region Big-endian
 
-    public void writeF4be(float v) {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putFloat(v);
-    }
+    abstract public void writeF4be(float v);
 
-    public void writeF8be(double v) {
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putDouble(v);
-    }
+    abstract public void writeF8be(double v);
 
     //endregion
 
     //region Little-endian
 
-    public void writeF4le(float v) {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putFloat(v);
-    }
+    abstract public void writeF4le(float v);
 
-    public void writeF8le(double v) {
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putDouble(v);
+    abstract public void writeF8le(double v);
+
+    //endregion
+
+    //region Unaligned bit values
+
+    public void writeBitsInt(int n, long v) {
+        int bitsNeeded = n - bitsLeft;
+        int bytesNeeded = bitsNeeded / 8;
+
+        // Example:
+        //        pos()
+        //          | bitsNeeded = 10 -> bytesNeeded = 1 (only the complete bytes are counted)
+        //          v/         \
+        // |01101xxx|xxxxxxxx|xx......|  (x - the bits we want to write, . - no longer part of this field)
+        //  \  / \             /
+        //   ||   \___n = 13__/
+        //   ||
+        // already written bits
+
+        if (bitsLeft > 0) {// if the last written byte is filled with partial value, we have to change it too
+            seek(pos() - 1);
+            long mask = getMaskOnes(bitsLeft);
+            writeS1((byte) ((bits & (mask ^ 0xff)) | (v & mask)));
+        }
+        byte[] buf = new byte[bytesNeeded + 1];
+        for (int i = 0; i < bytesNeeded; i++) {
+            bitsNeeded -= 8;
+            long mask = 0xff << bitsNeeded;
+            buf[i] = (byte) (v & mask);
+        }
+        bitsLeft = 8 - bitsNeeded;
+        bits = buf[bytesNeeded] = (byte) (v & getMaskOnes(bitsNeeded));
+        // bits property has other meaning than in case of writing; it stores partial value of a byte that's probably going to be changed
+        writeBytes(buf);
     }
 
     //endregion
@@ -589,31 +429,11 @@ public class KaitaiStream {
      * Writes given byte array to the stream.
      * @param buf byte array to write
      */
-    public void writeBytes(byte[] buf) {
-        bb.put(buf);
-    }
+    abstract public void writeBytes(byte[] buf);
 
-    public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte) {
-        int len = buf.length;
-        bb.put(buf);
-        if (len < size) {
-            bb.put(term);
-            long padLen = size - len - 1;
-            for (long i = 0; i < padLen; i++)
-                bb.put(padByte);
-        } else if (len > size) {
-            throw new IllegalArgumentException(
-                    "Writing " + size + " bytes, but " + len + " bytes were given"
-            );
-        }
-    }
+    abstract public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte);
 
-    public void writeStream(KaitaiStream other) {
-        long otherPos = other.pos();
-        other.seek(0);
-        bb.put(other.bb);
-        other.seek(otherPos);
-    }
+    abstract public void writeStream(KaitaiStream other);
 
     //endregion
 
@@ -707,6 +527,19 @@ public class KaitaiStream {
         return baos.toByteArray();
     }
 
+    public static byte[] unprocessZlib(byte[] data) {
+        Deflater dfl = new Deflater();
+        dfl.setInput(data);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte buf[] = new byte[ZLIB_BUF_SIZE];
+        while (!dfl.finished()) {
+            int decBytes = dfl.deflate(buf);
+            baos.write(buf, 0, decBytes);
+        }
+        dfl.end();
+        return baos.toByteArray();
+    }
+
     //endregion
 
     //region Misc runtime operations
@@ -751,7 +584,7 @@ public class KaitaiStream {
      * greater than [0x10].
      * @param a first byte array to compare
      * @param b second byte array to compare
-     * @return -1 if a < b, 0 if a == b, 1 if a > b
+     * @return negative number if a &lt; b, 0 if a == b, positive number if a &gt; b
      * @see Comparable#compareTo(Object)
      */
     public static int byteArrayCompare(byte[] a, byte[] b) {
@@ -774,7 +607,47 @@ public class KaitaiStream {
         }
     }
 
+    /**
+     * Finds the minimal byte in a byte array, treating bytes as
+     * unsigned values.
+     * @param b byte array to scan
+     * @return minimal byte in byte array as integer
+     */
+    public static int byteArrayMin(byte[] b) {
+        int min = Integer.MAX_VALUE;
+        for (int i = 0; i < b.length; i++) {
+            int value = b[i] & 0xff;
+            if (value < min)
+                min = value;
+        }
+        return min;
+    }
+
+    /**
+     * Finds the maximal byte in a byte array, treating bytes as
+     * unsigned values.
+     * @param b byte array to scan
+     * @return maximal byte in byte array as integer
+     */
+    public static int byteArrayMax(byte[] b) {
+        int max = 0;
+        for (int i = 0; i < b.length; i++) {
+            int value = b[i] & 0xff;
+            if (value > max)
+                max = value;
+        }
+        return max;
+    }
+
     //endregion
+
+    public byte[] toByteArray() {
+        long pos = pos();
+        seek(0);
+        byte[] r = readBytesFull();
+        seek(pos);
+        return r;
+    }
 
     /**
      * Exception class for an error that occurs when some fixed content
@@ -784,7 +657,7 @@ public class KaitaiStream {
         public UnexpectedDataError(byte[] actual, byte[] expected) {
             super(
                     "Unexpected fixed contents: got " + byteArrayToHex(actual) +
-                    " , was waiting for " + byteArrayToHex(expected)
+                    ", was waiting for " + byteArrayToHex(expected)
             );
         }
 
@@ -797,5 +670,67 @@ public class KaitaiStream {
             }
             return sb.toString();
         }
+    }
+
+    /**
+     * Error that occurs when default endianness should be decided with a
+     * switch, but nothing matches (although using endianness expression
+     * implies that there should be some positive result).
+     */
+    public static class UndecidedEndiannessError extends RuntimeException {}
+
+    /**
+     * Common ancestor for all error originating from Kaitai Struct usage.
+     * Stores KSY source path, pointing to an element supposedly guilty of
+     * an error.
+     */
+    public static class KaitaiStructError extends RuntimeException {
+        public KaitaiStructError(String msg, String srcPath) {
+            super(srcPath + ": " + msg);
+            this.srcPath = srcPath;
+        }
+
+        protected String srcPath;
+    }
+
+    /**
+     * Common ancestor for all validation failures. Stores pointer to
+     * KaitaiStream IO object which was involved in an error.
+     */
+    public static class ValidationFailedError extends KaitaiStructError {
+        public ValidationFailedError(String msg, KaitaiStream io, String srcPath) {
+            super("at pos " + io.pos() + ": validation failed: " + msg, srcPath);
+            this.io = io;
+        }
+
+        protected KaitaiStream io;
+
+        protected static String byteArrayToHex(byte[] arr) {
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < arr.length; i++) {
+                if (i > 0)
+                    sb.append(' ');
+                sb.append(String.format("%02x", arr[i]));
+            }
+            sb.append(']');
+            return sb.toString();
+        }
+    }
+
+    /**
+     * Signals validation failure: we required "actual" value to be equal to
+     * "expected", but it turned out that it's not.
+     */
+    public static class ValidationNotEqualError extends ValidationFailedError {
+        public ValidationNotEqualError(byte[] expected, byte[] actual, KaitaiStream io, String srcPath) {
+            super("not equal, expected " + byteArrayToHex(expected) + ", but got " + byteArrayToHex(actual), io, srcPath);
+        }
+
+        public ValidationNotEqualError(Object expected, Object actual, KaitaiStream io, String srcPath) {
+            super("not equal, expected " + expected + ", but got " + actual, io, srcPath);
+        }
+
+        protected Object expected;
+        protected Object actual;
     }
 }
