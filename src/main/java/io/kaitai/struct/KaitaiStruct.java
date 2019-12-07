@@ -32,10 +32,12 @@ public class KaitaiStruct {
      * Stream object that this KaitaiStruct-based structure was parsed from.
      */
     protected KaitaiStream _io;
+    protected KaitaiStruct _parent;
 
     public KaitaiStruct(KaitaiStream _io) {
         this._io = _io;
     }
 
     public KaitaiStream _io() { return _io; }
+    public KaitaiStruct _parent() { return _parent; }
 }
