@@ -575,4 +575,30 @@ public abstract class KaitaiStream implements Closeable {
         protected Object expected;
         protected Object actual;
     }
+
+    public static class ValidationLessThanError extends ValidationFailedError {
+        public ValidationLessThanError(long min, long actual, KaitaiStream io, String srcPath) {
+            super("not in range, min " + min + ", but got " + actual, io, srcPath);
+        }
+
+        protected long min;
+        protected long actual;
+    }
+
+    public static class ValidationGreaterThanError extends ValidationFailedError {
+        public ValidationGreaterThanError(long max, long actual, KaitaiStream io, String srcPath) {
+            super("not in range, max " + max + ", but got " + actual, io, srcPath);
+        }
+
+        protected long max;
+        protected long actual;
+    }
+
+    public static class ValidationNotAnyOfError extends ValidationFailedError {
+        public ValidationNotAnyOfError(Object actual, KaitaiStream io, String srcPath) {
+            super("not any of the list, got " + actual, io, srcPath);
+        }
+
+        protected Object actual;
+    }
 }
