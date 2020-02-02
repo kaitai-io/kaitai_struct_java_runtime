@@ -389,34 +389,42 @@ public abstract class KaitaiStream implements Closeable {
     //region Unaligned bit values
 
     public void writeBitsInt(int n, long v) {
-        int bitsNeeded = n - bitsLeft;
-        int bytesNeeded = bitsNeeded / 8;
-
         // Example:
         //        pos()
-        //          | bitsNeeded = 10 -> bytesNeeded = 1 (only the complete bytes are counted)
+        //          | bitShift = 10
         //          v/         \
         // |01101xxx|xxxxxxxx|xx......|  (x - the bits we want to write, . - no longer part of this field)
-        //  \  / \             /
-        //   ||   \___n = 13__/
-        //   ||
-        // already written bits
+        //  \   /\             /\    /
+        //   \ /  \___n = 13__/  \  /
+        //    V                   \/
+        // already written bits | potentially written bits too - we should not assume that fields come always in sequence
+
+        int bitShift = n - bitsLeft;
+        int numBytes = bitShift > 0 ? ((bitShift - 1) / 8) + 1 : 0;
 
         if (bitsLeft > 0) {// if the last written byte is filled with partial value, we have to change it too
             seek(pos() - 1);
-            long mask = getMaskOnes(bitsLeft);
-            writeS1((byte) ((bits & (mask ^ 0xff)) | (v & mask)));
+            numBytes++;
+            bitShift += 8;
+        } else {
+            bitsLeft = 8;
         }
-        byte[] buf = new byte[bytesNeeded + 1];
-        for (int i = 0; i < bytesNeeded; i++) {
-            bitsNeeded -= 8;
-            long mask = 0xff << bitsNeeded;
-            buf[i] = (byte) (v & mask);
-        }
-        bitsLeft = 8 - bitsNeeded;
-        bits = buf[bytesNeeded] = (byte) (v & getMaskOnes(bitsNeeded));
-        // bits property has other meaning than in case of writing; it stores partial value of a byte that's probably going to be changed
+
+        byte[] buf = readBytes(numBytes);
+        seek(pos() - numBytes);
+
+        for (int i = 0; i < numBytes; i++) {
+            bitShift -= 8;
+            long mask = bitShift > 0 ? getMaskOnes(bitsLeft) : getMaskOnes(bitsLeft + bitShift) << (- bitShift);
+            long shifted = bitShift > 0 ? v >>> bitShift : v << (- bitShift);
+            buf[i] = (byte) ((buf[i] & (mask ^ 0xff)) | (shifted & mask));
+
+            bitsLeft = 8;
+        };
+
         writeBytes(buf);
+
+        bitsLeft = - bitShift;
     }
 
     //endregion
