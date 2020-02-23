@@ -122,7 +122,7 @@ public abstract class KaitaiStream implements Closeable {
      * Get current position of a stream pointer.
      * @return pointer position, number of bytes from the beginning of the stream
      */
-    abstract public int pos();
+    abstract public long pos();
 
     /**
      * Get total size of the stream in bytes.

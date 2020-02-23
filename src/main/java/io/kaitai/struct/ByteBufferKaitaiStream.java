@@ -248,8 +248,8 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     @Override
-    public int pos() {
-        return bb.position() + ((bitsWriteMode && bitsLeft > 0) ? 1 : 0);
+    public long pos() {
+        return bb.position() + ((bitsWriteMode && bitsLeft > 0) ? 1L : 0L);
     }
 
     @Override
