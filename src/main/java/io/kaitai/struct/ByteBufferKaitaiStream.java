@@ -191,7 +191,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     @Override
-    public int pos() {
+    public long pos() {
         return bb.position();
     }
 
