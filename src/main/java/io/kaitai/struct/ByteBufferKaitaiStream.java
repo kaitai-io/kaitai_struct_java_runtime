@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2019 Kaitai Project: MIT license
+ * Copyright 2015-2020 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -55,18 +55,47 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     /**
      * Initializes a stream that will get data from given byte array when read.
      * Internally, ByteBuffer wrapping given array will be used.
+     *
      * @param arr byte array to read
      */
     public ByteBufferKaitaiStream(byte[] arr) {
+        this(arr, 0);
+    }
+
+    /**
+     * Initializes a stream that will get data from given byte array when read.
+     * Internally, ByteBuffer wrapping given array will be used.
+     *
+     * @param arr byte array to read
+     * @param offset offset from the root stream where this stream begins
+     *
+     * @since 0.10
+     */
+    public ByteBufferKaitaiStream(byte[] arr, long offset) {
+        super(offset);
         fc = null;
         bb = ByteBuffer.wrap(arr);
     }
 
     /**
      * Initializes a stream that will get data from given ByteBuffer when read.
+     *
      * @param buffer ByteBuffer to read
      */
     public ByteBufferKaitaiStream(ByteBuffer buffer) {
+        this(buffer, 0);
+    }
+
+    /**
+     * Initializes a stream that will get data from given ByteBuffer when read.
+     *
+     * @param buffer ByteBuffer to read
+     * @param offset offset from the root stream where this stream begins
+     *
+     * @since 0.10
+     */
+    public ByteBufferKaitaiStream(ByteBuffer buffer, long offset) {
+        super(offset);
         fc = null;
         bb = buffer;
     }
