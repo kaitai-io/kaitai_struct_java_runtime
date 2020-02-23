@@ -60,12 +60,30 @@ import java.util.zip.Deflater;
 public abstract class KaitaiStream implements Closeable {
     protected int bitsLeft = 0;
     protected long bits = 0;
+    /**
+     * Offset from the root stream where this stream begins.
+     *
+     * @since 0.11
+     */
+    protected final long offset;
     protected boolean bitsLe = false;
     protected boolean bitsWriteMode = false;
 
     protected WriteBackHandler writeBackHandler;
 
     protected List<KaitaiStream> childStreams = new ArrayList<>();
+
+    /** Initializes a stream with zero offset from the root stream. */
+    public KaitaiStream() { this(0); }
+
+    /**
+     * Initializes a stream with specified offset from the root stream.
+     *
+     * @param offset offset from the root stream where this stream begins
+     *
+     * @since 0.11
+     */
+    public KaitaiStream(long offset) { this.offset = offset; }
 
     @Override
     abstract public void close() throws IOException;
@@ -89,6 +107,16 @@ public abstract class KaitaiStream implements Closeable {
      * @param newPos new position (offset in bytes from the beginning of the stream)
      */
     abstract public void seek(long newPos);
+
+    /**
+     * Get position of a stream pointer relative to the root stream in the stream hierarchy.
+     * Root stream is a stream without parent stream.
+     *
+     * @return the pointer position, number of bytes from the beginning of the root stream
+     *
+     * @since 0.11
+     */
+    public long offset() { return this.offset; }
 
     /**
      * Get current position of a stream pointer.

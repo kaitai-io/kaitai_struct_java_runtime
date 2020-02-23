@@ -63,6 +63,20 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * @param arr byte array to read from or write to
      */
     public ByteBufferKaitaiStream(byte[] arr) {
+        this(arr, 0);
+    }
+
+    /**
+     * Initializes a stream that will get data from the given byte array when read.
+     * Internally, ByteBuffer wrapping given array will be used.
+     *
+     * @param arr byte array to read
+     * @param offset offset from the root stream where this stream begins
+     *
+     * @since 0.11
+     */
+    public ByteBufferKaitaiStream(byte[] arr, long offset) {
+        super(offset);
         fc = null;
         bb = ByteBuffer.wrap(arr);
     }
@@ -73,6 +87,19 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * @param buffer {@link ByteBuffer} to read from or write to
      */
     public ByteBufferKaitaiStream(ByteBuffer buffer) {
+        this(buffer, 0);
+    }
+
+    /**
+     * Initializes a stream that will get data from given {@link ByteBuffer} on read.
+     *
+     * @param buffer ByteBuffer to read from
+     * @param offset offset from the root stream where this stream begins
+     *
+     * @since 0.11
+     */
+    public ByteBufferKaitaiStream(ByteBuffer buffer, long offset) {
+        super(offset);
         fc = null;
         bb = buffer;
     }
