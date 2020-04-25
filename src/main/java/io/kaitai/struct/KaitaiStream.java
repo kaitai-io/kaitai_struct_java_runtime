@@ -220,6 +220,12 @@ public abstract class KaitaiStream implements Closeable {
         return res;
     }
 
+    /**
+     * Unused since Kaitai Struct Compiler v0.9+ - compatibility with older versions
+     *
+     * @deprecated use {@link #readBitsIntBe()} instead
+     */
+    @Deprecated
     public long readBitsInt(int n) {
         return readBitsIntBe(n);
     }
