@@ -189,7 +189,7 @@ public abstract class KaitaiStream implements Closeable {
         bitsLeft = 0;
     }
 
-    public long readBitsInt(int n) {
+    public long readBitsIntBe(int n) {
         int bitsNeeded = n - bitsLeft;
         if (bitsNeeded > 0) {
             // 1 bit  => 1 byte
@@ -216,6 +216,35 @@ public abstract class KaitaiStream implements Closeable {
         bitsLeft -= n;
         mask = getMaskOnes(bitsLeft);
         bits &= mask;
+
+        return res;
+    }
+
+    public long readBitsInt(int n) {
+        return readBitsIntBe(n);
+    }
+
+    public long readBitsIntLe(int n) {
+        int bitsNeeded = n - bitsLeft;
+        if (bitsNeeded > 0) {
+            // 1 bit  => 1 byte
+            // 8 bits => 1 byte
+            // 9 bits => 2 bytes
+            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1;
+            byte[] buf = readBytes(bytesNeeded);
+            for (byte b : buf) {
+                bits |= ((long) (b & 0xff) << bitsLeft);
+                bitsLeft += 8;
+            }
+        }
+
+        // raw mask with required number of 1s, starting from lowest bit
+        long mask = getMaskOnes(n);
+        // derive reading result
+        long res = bits & mask;
+        // remove bottom bits that we've just read by shifting
+        bits >>= n;
+        bitsLeft -= n;
 
         return res;
     }
