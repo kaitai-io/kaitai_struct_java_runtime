@@ -207,11 +207,9 @@ public abstract class KaitaiStream implements Closeable {
 
         // raw mask with required number of 1s, starting from lowest bit
         long mask = getMaskOnes(n);
-        // shift mask to align with highest bits available in "bits"
+        // shift "bits" to align the highest bits with the mask & derive the result
         int shiftBits = bitsLeft - n;
-        mask <<= shiftBits;
-        // derive reading result
-        long res = (bits & mask) >>> shiftBits;
+        long res = (bits >>> shiftBits) & mask;
         // clear top bits that we've just read => AND with 1s
         bitsLeft -= n;
         mask = getMaskOnes(bitsLeft);
