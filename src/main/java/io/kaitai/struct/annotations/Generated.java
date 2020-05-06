@@ -56,6 +56,7 @@ public @interface Generated {
      * Class compiled with support of position tracking. That means, that every class
      * has following public fields (in that version of generator):
      * <table>
+     * <caption>Position tracking info.</caption>
      * <tr><th>Type</th><th>Field</th><th>Description</th></tr>
      * <tr><td>{@code Map<String, Integer>}</td><td>{@code _attrStart}</td>
      *     <td>Start offset in the root stream, where {@link SeqItem an attribute} or
