@@ -634,4 +634,12 @@ public abstract class KaitaiStream implements Closeable {
 
         protected Object actual;
     }
+
+    public static class ValidationExprError extends ValidationFailedError {
+        public ValidationExprError(Object actual, KaitaiStream io, String srcPath) {
+            super("not matching the expression, got " + actual, io, srcPath);
+        }
+
+        protected Object actual;
+    }
 }
