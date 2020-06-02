@@ -306,7 +306,7 @@ public abstract class KaitaiStream implements Closeable {
     public static byte[] bytesTerminate(byte[] bytes, byte term, boolean includeTerm) {
         int newLen = 0;
         int maxLen = bytes.length;
-        while (bytes[newLen] != term && newLen < maxLen)
+        while (newLen < maxLen && bytes[newLen] != term)
             newLen++;
         if (includeTerm && newLen < maxLen)
             newLen++;
