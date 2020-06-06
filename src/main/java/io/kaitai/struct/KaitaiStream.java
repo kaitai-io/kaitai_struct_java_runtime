@@ -610,21 +610,29 @@ public abstract class KaitaiStream implements Closeable {
     }
 
     public static class ValidationLessThanError extends ValidationFailedError {
-        public ValidationLessThanError(long min, long actual, KaitaiStream io, String srcPath) {
+        public ValidationLessThanError(byte[] expected, byte[] actual, KaitaiStream io, String srcPath) {
+            super("not in range, min " + byteArrayToHex(expected) + ", but got " + byteArrayToHex(actual), io, srcPath);
+        }
+
+        public ValidationLessThanError(Object min, Object actual, KaitaiStream io, String srcPath) {
             super("not in range, min " + min + ", but got " + actual, io, srcPath);
         }
 
-        protected long min;
-        protected long actual;
+        protected Object min;
+        protected Object actual;
     }
 
     public static class ValidationGreaterThanError extends ValidationFailedError {
-        public ValidationGreaterThanError(long max, long actual, KaitaiStream io, String srcPath) {
+        public ValidationGreaterThanError(byte[] expected, byte[] actual, KaitaiStream io, String srcPath) {
+            super("not in range, max " + byteArrayToHex(expected) + ", but got " + byteArrayToHex(actual), io, srcPath);
+        }
+
+        public ValidationGreaterThanError(Object max, Object actual, KaitaiStream io, String srcPath) {
             super("not in range, max " + max + ", but got " + actual, io, srcPath);
         }
 
-        protected long max;
-        protected long actual;
+        protected Object max;
+        protected Object actual;
     }
 
     public static class ValidationNotAnyOfError extends ValidationFailedError {
