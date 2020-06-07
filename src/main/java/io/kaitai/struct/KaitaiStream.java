@@ -288,7 +288,9 @@ public abstract class KaitaiStream implements Closeable {
      * @param expected contents to be expected
      * @return read bytes as byte array, which are guaranteed to equal to expected
      * @throws UnexpectedDataError if read data from stream isn't equal to given data
+     * @deprecated Not used anymore in favour of validators.
      */
+    @Deprecated
     public byte[] ensureFixedContents(byte[] expected) {
         byte[] actual = readBytes(expected.length);
         if (!Arrays.equals(actual, expected))
@@ -527,7 +529,10 @@ public abstract class KaitaiStream implements Closeable {
     /**
      * Exception class for an error that occurs when some fixed content
      * was expected to appear, but actual data read was different.
+     *
+     * @deprecated Not used anymore in favour of {@code Validation*}-exceptions.
      */
+    @Deprecated
     public static class UnexpectedDataError extends RuntimeException {
         public UnexpectedDataError(byte[] actual, byte[] expected) {
             super(
@@ -646,7 +651,7 @@ public abstract class KaitaiStream implements Closeable {
     public static class ValidationExprError extends ValidationFailedError {
         public ValidationExprError(Object actual, KaitaiStream io, String srcPath) {
             super("not matching the expression, got " + actual, io, srcPath);
-        }
+}
 
         protected Object actual;
     }
