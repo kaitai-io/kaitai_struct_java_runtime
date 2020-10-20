@@ -247,7 +247,7 @@ public abstract class KaitaiStream implements Closeable {
         // derive reading result
         long res = bits & mask;
         // remove bottom bits that we've just read by shifting
-        bits >>= n;
+        bits >>>= n;
         bitsLeft -= n;
 
         return res;
