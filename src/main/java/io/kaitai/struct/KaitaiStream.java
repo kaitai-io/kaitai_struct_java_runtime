@@ -32,7 +32,7 @@ import java.util.zip.Inflater;
 
 /**
  * KaitaiStream provides implementation of
- * <a href="https://github.com/kaitai-io/kaitai_struct/wiki/Kaitai-Struct-stream-API">Kaitai Struct stream API</a>
+ * <a href="https://doc.kaitai.io/stream_api.html">Kaitai Stream API</a>
  * for Java.
  *
  * It provides a wide variety of simple methods to read (parse) binary
