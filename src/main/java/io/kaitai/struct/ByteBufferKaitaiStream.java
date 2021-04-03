@@ -337,7 +337,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     @Override
-    public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+    public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         while (true) {
             if (!bb.hasRemaining()) {
@@ -347,7 +347,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
                     return buf.toByteArray();
                 }
             }
-            int c = bb.get();
+            byte c = bb.get();
             if (c == term) {
                 if (includeTerm)
                     buf.write(c);

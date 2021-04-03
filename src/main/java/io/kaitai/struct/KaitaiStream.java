@@ -278,7 +278,7 @@ public abstract class KaitaiStream implements Closeable {
      */
     abstract public byte[] readBytesFull();
 
-    abstract public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError);
+    abstract public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError);
 
     /**
      * Checks that next bytes in the stream match match expected fixed byte array.
@@ -346,7 +346,7 @@ public abstract class KaitaiStream implements Closeable {
      * @param key value to XOR with
      * @return processed data
      */
-    public static byte[] processXor(byte[] data, int key) {
+    public static byte[] processXor(byte[] data, byte key) {
         int dataLen = data.length;
         byte[] r = new byte[dataLen];
         for (int i = 0; i < dataLen; i++)
