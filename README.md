@@ -14,22 +14,15 @@ Further reading:
 * [About API implemented in this library](http://doc.kaitai.io/stream_api.html)
 * [Java-specific notes](http://doc.kaitai.io/lang_java.html)
 
-# Build
-To build library run the following command:
+## Build
+To build the library, run the following command:
 
-```console
+```sh
 mvn install
 ```
 
-# Release
-To make a release ensure that you have:
-
-- a [gpg](https://gnupg.org/) installed
-- a [configured](https://maven.apache.org/plugins/maven-gpg-plugin/usage.html) gpg signing key
-- pass `-DperformRelease=true` argument to the maven command invocation:
-
-  ```console
-  mvn -DperformRelease=true deploy
-  ```
-
-See also http://doc.kaitai.io/developers.html#java.
+## Release
+<sub>
+If you are maintainer of this project please visit http://doc.kaitai.io/developers.html#java
+to get instructions how to make a release.
+</sub>
