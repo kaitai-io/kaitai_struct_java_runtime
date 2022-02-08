@@ -185,34 +185,35 @@ public abstract class KaitaiStream implements Closeable {
     //region Unaligned bit values
 
     public void alignToByte() {
-        bits = 0;
         bitsLeft = 0;
+        bits = 0;
     }
 
     public long readBitsIntBe(int n) {
+        long res = 0;
+
         int bitsNeeded = n - bitsLeft;
+        bitsLeft = -bitsNeeded & 7; // `-bitsNeeded mod 8`
+
         if (bitsNeeded > 0) {
             // 1 bit  => 1 byte
             // 8 bits => 1 byte
             // 9 bits => 2 bytes
-            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1;
+            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1; // `ceil(bitsNeeded / 8)`
             byte[] buf = readBytes(bytesNeeded);
             for (byte b : buf) {
-                bits <<= 8;
-                // b is signed byte, convert to unsigned using "& 0xff" trick
-                bits |= (b & 0xff);
-                bitsLeft += 8;
+                // `b` is signed byte, convert to unsigned using the "& 0xff" trick
+                res = res << 8 | (b & 0xff);
             }
+
+            long newBits = res;
+            res = res >>> bitsLeft | bits << bitsNeeded;
+            bits = newBits; // will be masked at the end of the function
+        } else {
+            res = bits >>> -bitsNeeded; // shift unneeded bits out
         }
 
-        // raw mask with required number of 1s, starting from lowest bit
-        long mask = getMaskOnes(n);
-        // shift "bits" to align the highest bits with the mask & derive the result
-        int shiftBits = bitsLeft - n;
-        long res = (bits >>> shiftBits) & mask;
-        // clear top bits that we've just read => AND with 1s
-        bitsLeft -= n;
-        mask = getMaskOnes(bitsLeft);
+        long mask = (1L << bitsLeft) - 1; // `bitsLeft` is in range 0..7, so `(1L << 64)` does not have to be considered
         bits &= mask;
 
         return res;
@@ -229,36 +230,40 @@ public abstract class KaitaiStream implements Closeable {
     }
 
     public long readBitsIntLe(int n) {
+        long res = 0;
         int bitsNeeded = n - bitsLeft;
+
         if (bitsNeeded > 0) {
             // 1 bit  => 1 byte
             // 8 bits => 1 byte
             // 9 bits => 2 bytes
-            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1;
+            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1; // `ceil(bitsNeeded / 8)`
             byte[] buf = readBytes(bytesNeeded);
-            for (byte b : buf) {
-                bits |= ((long) (b & 0xff) << bitsLeft);
-                bitsLeft += 8;
+            for (int i = 0; i < bytesNeeded; i++) {
+                // `buf[i]` is signed byte, convert to unsigned using the "& 0xff" trick
+                res |= ((long) (buf[i] & 0xff)) << (i * 8);
             }
-        }
 
-        // raw mask with required number of 1s, starting from lowest bit
-        long mask = getMaskOnes(n);
-        // derive reading result
-        long res = bits & mask;
-        // remove bottom bits that we've just read by shifting
-        bits >>>= n;
-        bitsLeft -= n;
-
-        return res;
-    }
-
-    private static long getMaskOnes(int n) {
-        if (n == 64) {
-            return 0xffffffffffffffffL;
+            // NB: in Java, bit shift operators on left-hand operand of type `long` work
+            // as if the right-hand operand were subjected to `& 63` (`& 0b11_1111`) (see
+            // https://docs.oracle.com/javase/specs/jls/se7/html/jls-15.html#jls-15.19),
+            // so `res >>> 64` is equivalent to `res >>> 0` (but we don't want that)
+            long newBits = bitsNeeded < 64 ? res >>> bitsNeeded : 0;
+            res = res << bitsLeft | bits;
+            bits = newBits;
         } else {
-            return (1L << n) - 1;
+            res = bits;
+            bits >>>= n;
         }
+
+        bitsLeft = -bitsNeeded & 7; // `-bitsNeeded mod 8`
+
+        if (n < 64) {
+            long mask = (1L << n) - 1;
+            res &= mask;
+        }
+        // if `n == 64`, do nothing
+        return res;
     }
 
     //endregion
