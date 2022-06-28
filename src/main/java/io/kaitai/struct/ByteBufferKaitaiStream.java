@@ -129,7 +129,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * </p>
      * <p>
      * For more examples and suggestions, see:
-     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-filechannel-in-java
+     * <a href="https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-filechannel-in-java">How to unmap a file from memory mapped using FileChannel in java?</a>
      * </p>
      * @throws IOException if FileChannel can't be closed
      */
