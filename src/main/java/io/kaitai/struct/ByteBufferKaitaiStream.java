@@ -106,8 +106,9 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     /**
      * Closes the stream safely. If there was an open file associated with it, closes that file.
      * For streams that were reading from in-memory array, does nothing.
+     * @implNote
      * <p>
-     * @implNote Unfortunately, there is no simple way to close memory-mapped ByteBuffer in
+     * Unfortunately, there is no simple way to close memory-mapped ByteBuffer in
      * Java and unmap underlying file. As {@link MappedByteBuffer} documentation suggests,
      * "mapped byte buffer and the file mapping that it represents remain valid until the
      * buffer itself is garbage-collected". Thus, the best we can do is to delete all
