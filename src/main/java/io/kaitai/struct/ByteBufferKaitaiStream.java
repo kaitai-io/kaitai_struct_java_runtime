@@ -361,4 +361,18 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     //endregion
+
+    @Override
+    public KaitaiStream substream(long n) {
+        if (n > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Java ByteBuffer can't be limited beyond Integer.MAX_VALUE");
+        }
+
+        ByteBuffer newBuffer = bb.slice();
+        newBuffer.limit((int) n);
+
+        bb.position(bb.position() + (int) n);
+
+        return new ByteBufferKaitaiStream(newBuffer);
+    }
 }

@@ -435,6 +435,15 @@ public abstract class KaitaiStream implements Closeable {
     //region Misc runtime operations
 
     /**
+     * Reserves next `n` bytes from current stream as a KaitaiStream-compatible substream.
+     * Substream has its own pointer and addressing in the range of [0, n) bytes. This
+     * stream's pointer is advanced to the position right after this substream.
+     * @param n number of bytes to reserve for a substream
+     * @return substream covering n bytes from the current position
+     */
+    abstract public KaitaiStream substream(long n);
+
+    /**
      * Performs modulo operation between two integers: dividend `a`
      * and divisor `b`. Divisor `b` is expected to be positive. The
      * result is always 0 &lt;= x &lt;= b - 1.

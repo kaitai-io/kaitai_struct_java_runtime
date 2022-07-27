@@ -363,6 +363,21 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    @Override
+    public KaitaiStream substream(long n) {
+        // This implementation mirrors what ksc was doing up to v0.10, and the fallback that
+        // it is still doing in case something non-trivial has to happen with the byte contents.
+        //
+        // Given that RandomAccessFile-based stream is not really efficient anyway, this seems
+        // to be a reasonable fallback without resorting to a special limiting implementation.
+        //
+        // If and when somebody will come up with a reason why substreams have to implemented
+        // for RAF, feel free to contribute relevant implementation with some rationale (e.g. a
+        // benchmark).
+
+        return new ByteBufferKaitaiStream(readBytes(n));
+    }
+
     //region Helper methods
 
     private ByteBuffer wrapBufferLe(int count) {
