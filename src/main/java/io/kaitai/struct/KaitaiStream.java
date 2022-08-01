@@ -472,14 +472,14 @@ public abstract class KaitaiStream implements Closeable {
 
         for (int i = 0; i < numBytes; i++) {
             bitShift -= 8;
-            long mask = bitShift > 0 ? getMaskOnes(bitsLeft) : getMaskOnes(bitsLeft + bitShift) << (- bitShift);
+            long mask = bitShift > 0 ? (1L << bitsLeft) - 1 : (1L << (bitsLeft + bitShift)) - 1 << (- bitShift);
             long shifted = bitShift > 0 ? v >>> bitShift : v << (- bitShift);
             buf[i] = (byte) ((buf[i] & (mask ^ 0xff)) | (shifted & mask));
 
             if (i == 0) {
                 bitsLeft = 8;
             }
-        };
+        }
 
         writeBytes(buf);
 
