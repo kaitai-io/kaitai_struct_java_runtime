@@ -20,20 +20,37 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package io.kaitai.struct.annotations;
 
-package io.kaitai.struct;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * A custom decoder interface. Implementing classes can be called
- * from inside a .ksy file using `process: XXX` syntax.
+ * Annotation, that applied to fields, getters or setters that represents instance
+ * field from {@code instances} KSY element.
+ *
+ * @since 0.9
  */
-public interface CustomDecoder {
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.FIELD, ElementType.METHOD})
+public @interface Instance {
     /**
-     * Decodes a given byte array, according to some custom algorithm
-     * (specific to implementing class) and parameters given in the
-     * constructor, returning another byte array.
-     * @param src source byte array
-     * @return decoded byte array
+     * Original identifier ({@code id} key) from {@code ksy} file.
+     *
+     * @return Identifier, that can differ from instance name, if it clash with
+     *         Java reserved words. Can not be empty
      */
-    byte[] decode(byte[] src);
+    String id();
+    /**
+     * Documentation string attached to the instance definition, specified in {@code doc}
+     * KSY element.
+     *
+     * @return Documentation string for an instance. If documentation is missed,
+     *         returns empty string
+     */
+    String doc();
 }

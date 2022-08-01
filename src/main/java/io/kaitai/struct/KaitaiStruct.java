@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 Kaitai Project: MIT license
+ * Copyright 2015-2022 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -34,12 +34,14 @@ public class KaitaiStruct {
      * Stream object that this KaitaiStruct-based structure was parsed from.
      */
     protected KaitaiStream _io;
+    protected KaitaiStruct _parent;
 
     public KaitaiStruct(KaitaiStream _io) {
         this._io = _io;
     }
 
     public KaitaiStream _io() { return _io; }
+    public KaitaiStruct _parent() { return _parent; }
 
     /**
      * KaitaiStruct object that supports reading from a supplied stream object.

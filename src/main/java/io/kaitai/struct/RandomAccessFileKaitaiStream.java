@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2019 Kaitai Project: MIT license
+ * Copyright 2015-2022 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -338,7 +338,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
     }
 
     @Override
-    public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+    public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
         try {
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
             while (true) {
@@ -349,7 +349,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
                     } else {
                         return buf.toByteArray();
                     }
-                } else if (c == term) {
+                } else if ((byte) c == term) {
                     if (includeTerm)
                         buf.write(c);
                     if (!consumeTerm)

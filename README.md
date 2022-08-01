@@ -1,5 +1,7 @@
 # Kaitai Struct: runtime library for Java
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.kaitai/kaitai-struct-runtime)](https://search.maven.org/artifact/io.kaitai/kaitai-struct-runtime)
+
 This library implements Kaitai Struct API for Java.
 
 Kaitai Struct is a declarative language used for describe various binary

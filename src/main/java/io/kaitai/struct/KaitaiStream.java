@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2019 Kaitai Project: MIT license
+ * Copyright 2015-2022 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -33,7 +33,7 @@ import java.util.zip.Deflater;
 
 /**
  * KaitaiStream provides implementation of
- * <a href="https://github.com/kaitai-io/kaitai_struct/wiki/Kaitai-Struct-stream-API">Kaitai Struct stream API</a>
+ * <a href="https://doc.kaitai.io/stream_api.html">Kaitai Stream API</a>
  * for Java.
  *
  * It provides a wide variety of simple methods to read (parse) binary
@@ -188,47 +188,85 @@ public abstract class KaitaiStream implements Closeable {
     //region Unaligned bit values
 
     public void alignToByte() {
-        bits = 0;
         bitsLeft = 0;
+        bits = 0;
     }
 
-    public long readBitsInt(int n) {
+    public long readBitsIntBe(int n) {
+        long res = 0;
+
         int bitsNeeded = n - bitsLeft;
+        bitsLeft = -bitsNeeded & 7; // `-bitsNeeded mod 8`
+
         if (bitsNeeded > 0) {
             // 1 bit  => 1 byte
             // 8 bits => 1 byte
             // 9 bits => 2 bytes
-            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1;
+            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1; // `ceil(bitsNeeded / 8)`
             byte[] buf = readBytes(bytesNeeded);
             for (byte b : buf) {
-                bits <<= 8;
-                // b is signed byte, convert to unsigned using "& 0xff" trick
-                bits |= (b & 0xff);
-                bitsLeft += 8;
+                // `b` is signed byte, convert to unsigned using the "& 0xff" trick
+                res = res << 8 | (b & 0xff);
             }
+
+            long newBits = res;
+            res = res >>> bitsLeft | bits << bitsNeeded;
+            bits = newBits; // will be masked at the end of the function
+        } else {
+            res = bits >>> -bitsNeeded; // shift unneeded bits out
         }
 
-        // raw mask with required number of 1s, starting from lowest bit
-        long mask = getMaskOnes(n);
-        // shift mask to align with highest bits available in "bits"
-        int shiftBits = bitsLeft - n;
-        mask <<= shiftBits;
-        // derive reading result
-        long res = (bits & mask) >>> shiftBits;
-        // clear top bits that we've just read => AND with 1s
-        bitsLeft -= n;
-        mask = getMaskOnes(bitsLeft);
+        long mask = (1L << bitsLeft) - 1; // `bitsLeft` is in range 0..7, so `(1L << 64)` does not have to be considered
         bits &= mask;
 
         return res;
     }
 
-    private static long getMaskOnes(int n) {
-        if (n == 64) {
-            return 0xffffffffffffffffL;
+    /**
+     * Unused since Kaitai Struct Compiler v0.9+ - compatibility with older versions
+     *
+     * @deprecated use {@link #readBitsIntBe(int)} instead
+     */
+    @Deprecated
+    public long readBitsInt(int n) {
+        return readBitsIntBe(n);
+    }
+
+    public long readBitsIntLe(int n) {
+        long res = 0;
+        int bitsNeeded = n - bitsLeft;
+
+        if (bitsNeeded > 0) {
+            // 1 bit  => 1 byte
+            // 8 bits => 1 byte
+            // 9 bits => 2 bytes
+            int bytesNeeded = ((bitsNeeded - 1) / 8) + 1; // `ceil(bitsNeeded / 8)`
+            byte[] buf = readBytes(bytesNeeded);
+            for (int i = 0; i < bytesNeeded; i++) {
+                // `buf[i]` is signed byte, convert to unsigned using the "& 0xff" trick
+                res |= ((long) (buf[i] & 0xff)) << (i * 8);
+            }
+
+            // NB: in Java, bit shift operators on left-hand operand of type `long` work
+            // as if the right-hand operand were subjected to `& 63` (`& 0b11_1111`) (see
+            // https://docs.oracle.com/javase/specs/jls/se7/html/jls-15.html#jls-15.19),
+            // so `res >>> 64` is equivalent to `res >>> 0` (but we don't want that)
+            long newBits = bitsNeeded < 64 ? res >>> bitsNeeded : 0;
+            res = res << bitsLeft | bits;
+            bits = newBits;
         } else {
-            return (1L << n) - 1;
+            res = bits;
+            bits >>>= n;
         }
+
+        bitsLeft = -bitsNeeded & 7; // `-bitsNeeded mod 8`
+
+        if (n < 64) {
+            long mask = (1L << n) - 1;
+            res &= mask;
+        }
+        // if `n == 64`, do nothing
+        return res;
     }
 
     //endregion
@@ -248,7 +286,7 @@ public abstract class KaitaiStream implements Closeable {
      */
     abstract public byte[] readBytesFull();
 
-    abstract public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError);
+    abstract public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError);
 
     /**
      * Checks that next bytes in the stream match match expected fixed byte array.
@@ -258,7 +296,9 @@ public abstract class KaitaiStream implements Closeable {
      * @param expected contents to be expected
      * @return read bytes as byte array, which are guaranteed to equal to expected
      * @throws UnexpectedDataError if read data from stream isn't equal to given data
+     * @deprecated Not used anymore in favour of validators.
      */
+    @Deprecated
     public byte[] ensureFixedContents(byte[] expected) {
         byte[] actual = readBytes(expected.length);
         if (!Arrays.equals(actual, expected))
@@ -276,7 +316,7 @@ public abstract class KaitaiStream implements Closeable {
     public static byte[] bytesTerminate(byte[] bytes, byte term, boolean includeTerm) {
         int newLen = 0;
         int maxLen = bytes.length;
-        while (bytes[newLen] != term && newLen < maxLen)
+        while (newLen < maxLen && bytes[newLen] != term)
             newLen++;
         if (includeTerm && newLen < maxLen)
             newLen++;
@@ -475,7 +515,7 @@ public abstract class KaitaiStream implements Closeable {
      * @param key value to XOR with
      * @return processed data
      */
-    public static byte[] processXor(byte[] data, int key) {
+    public static byte[] processXor(byte[] data, byte key) {
         int dataLen = data.length;
         byte[] r = new byte[dataLen];
         for (int i = 0; i < dataLen; i++)
@@ -679,7 +719,10 @@ public abstract class KaitaiStream implements Closeable {
     /**
      * Exception class for an error that occurs when some fixed content
      * was expected to appear, but actual data read was different.
+     *
+     * @deprecated Not used anymore in favour of {@code Validation*}-exceptions.
      */
+    @Deprecated
     public static class UnexpectedDataError extends RuntimeException {
         public UnexpectedDataError(byte[] actual, byte[] expected) {
             super(
@@ -758,6 +801,48 @@ public abstract class KaitaiStream implements Closeable {
         }
 
         protected Object expected;
+        protected Object actual;
+    }
+
+    public static class ValidationLessThanError extends ValidationFailedError {
+        public ValidationLessThanError(byte[] expected, byte[] actual, KaitaiStream io, String srcPath) {
+            super("not in range, min " + byteArrayToHex(expected) + ", but got " + byteArrayToHex(actual), io, srcPath);
+        }
+
+        public ValidationLessThanError(Object min, Object actual, KaitaiStream io, String srcPath) {
+            super("not in range, min " + min + ", but got " + actual, io, srcPath);
+        }
+
+        protected Object min;
+        protected Object actual;
+    }
+
+    public static class ValidationGreaterThanError extends ValidationFailedError {
+        public ValidationGreaterThanError(byte[] expected, byte[] actual, KaitaiStream io, String srcPath) {
+            super("not in range, max " + byteArrayToHex(expected) + ", but got " + byteArrayToHex(actual), io, srcPath);
+        }
+
+        public ValidationGreaterThanError(Object max, Object actual, KaitaiStream io, String srcPath) {
+            super("not in range, max " + max + ", but got " + actual, io, srcPath);
+        }
+
+        protected Object max;
+        protected Object actual;
+    }
+
+    public static class ValidationNotAnyOfError extends ValidationFailedError {
+        public ValidationNotAnyOfError(Object actual, KaitaiStream io, String srcPath) {
+            super("not any of the list, got " + actual, io, srcPath);
+        }
+
+        protected Object actual;
+    }
+
+    public static class ValidationExprError extends ValidationFailedError {
+        public ValidationExprError(Object actual, KaitaiStream io, String srcPath) {
+            super("not matching the expression, got " + actual, io, srcPath);
+}
+
         protected Object actual;
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2019 Kaitai Project: MIT license
+ * Copyright 2015-2022 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -119,8 +119,9 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     /**
      * Closes the stream safely. If there was an open file associated with it, closes that file.
      * For streams that were reading from in-memory array, does nothing.
+     * @implNote
      * <p>
-     * @implNote Unfortunately, there is no simple way to close memory-mapped ByteBuffer in
+     * Unfortunately, there is no simple way to close memory-mapped ByteBuffer in
      * Java and unmap underlying file. As {@link MappedByteBuffer} documentation suggests,
      * "mapped byte buffer and the file mapping that it represents remain valid until the
      * buffer itself is garbage-collected". Thus, the best we can do is to delete all
@@ -141,7 +142,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * </p>
      * <p>
      * For more examples and suggestions, see:
-     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-filechannel-in-java
+     * <a href="https://stackoverflow.com/q/2972986">How to unmap a file from memory mapped using FileChannel in java?</a>
      * </p>
      * @throws IOException if FileChannel can't be closed
      */
@@ -352,7 +353,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     @Override
-    public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+    public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         while (true) {
             if (!bb.hasRemaining()) {
@@ -362,7 +363,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
                     return buf.toByteArray();
                 }
             }
-            int c = bb.get();
+            byte c = bb.get();
             if (c == term) {
                 if (includeTerm)
                     buf.write(c);
