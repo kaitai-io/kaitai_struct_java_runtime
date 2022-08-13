@@ -24,8 +24,11 @@
 package io.kaitai.struct;
 
 /**
- * A custom decoder interface. Implementing classes can be called
- * from inside a .ksy file using `process: XXX` syntax.
+ * Custom decoder interface allows implementation of "byte array in - byte array
+ * out" decoders, compatible with Kaitai Struct. Classes implementing this
+ * interface can be called rom inside a .ksy file using `process: XXX` syntax.
+ * @see <a href="https://doc.kaitai.io/user_guide.html#custom-process">Kaitai
+ *     Struct documentation on custom processing routines</a>
  */
 public interface CustomDecoder {
     /**

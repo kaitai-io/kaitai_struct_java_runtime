@@ -34,8 +34,12 @@ import java.nio.file.StandardOpenOption;
 
 /**
  * An implementation of {@link KaitaiStream} backed by a {@link ByteBuffer}.
- * It can be either a {@link MappedByteBuffer} backed by {@link FileChannel},
- * or a regular wrapper over a given byte array).
+ * Any underlying implementation of ByteBuffer can be used, for example:
+ * <ul>
+ *     <li>ByteBuffer returned as result of {@link ByteBuffer#wrap}, wrapping
+ *         a byte array into a buffer.</li>
+ *     <li>{@link MappedByteBuffer} backed by {@link FileChannel}</li>
+ * </ul>
  */
 public class ByteBufferKaitaiStream extends KaitaiStream {
     private FileChannel fc;
