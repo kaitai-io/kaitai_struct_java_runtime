@@ -706,6 +706,27 @@ public abstract class KaitaiStream implements Closeable {
         return max;
     }
 
+    /**
+     * Returns the index of the first occurrence of the specified byte in a byte
+     * array, or -1 if this byte array does not contain the byte.
+     *
+     * @param arr byte array to search in
+     * @param b byte to search for
+     * @return index of the first occurrence of the specified byte in the byte
+     * array, or -1 if this byte array does not contain the byte
+     * @see java.util.List#indexOf(Object)
+     * @see String#indexOf(int)
+     */
+    public static int byteArrayIndexOf(byte[] arr, byte b) {
+        int len = arr.length;
+        for (int i = 0; i < len; i++) {
+            if (arr[i] == b) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     //endregion
 
     public byte[] toByteArray() {
