@@ -1,11 +1,11 @@
 package io.kaitai.struct;
 
 public class ConsistencyError extends RuntimeException {
-    private String id;
-    private String actual;
-    private String expected;
+    private final String id;
+    private final Object actual;
+    private final Object expected;
 
-    public ConsistencyError(String id, String actual, String expected) {
+    public ConsistencyError(String id, Object actual, Object expected) {
         super("Check failed: " + id + ", expected: " + expected + ", actual: " + actual);
 
         this.id = id;
@@ -13,13 +13,9 @@ public class ConsistencyError extends RuntimeException {
         this.expected = expected;
     }
 
-    public ConsistencyError(String id, long actual, long expected) {
-        this(id, "" + actual, "" + expected);
-    }
-
     public String id() { return id; }
-    public String actual() { return actual; }
-    public String expected() { return expected; }
+    public Object actual() { return actual; }
+    public Object expected() { return expected; }
 
     public static class SizeMismatch extends ConsistencyError {
         public SizeMismatch(String id, long actual, long expected) {
