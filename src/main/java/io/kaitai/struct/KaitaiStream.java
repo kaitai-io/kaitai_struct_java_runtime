@@ -26,7 +26,9 @@ package io.kaitai.struct;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 import java.util.zip.Deflater;
@@ -57,6 +59,10 @@ import java.util.zip.Deflater;
 public abstract class KaitaiStream implements Closeable {
     protected int bitsLeft = 0;
     protected long bits = 0;
+
+    protected WriteBackHandler writeBackHandler;
+
+    protected List<KaitaiStream> childStreams = new ArrayList<>();
 
     @Override
     abstract public void close() throws IOException;
@@ -735,6 +741,49 @@ public abstract class KaitaiStream implements Closeable {
         byte[] r = readBytesFull();
         seek(pos);
         return r;
+    }
+
+    public abstract static class WriteBackHandler {
+        protected final long pos;
+
+        public WriteBackHandler(long pos) {
+            this.pos = pos;
+        }
+
+        public void writeBack(KaitaiStream parent) {
+            parent.seek(pos);
+            write(parent);
+        }
+
+        protected abstract void write(KaitaiStream parent);
+    }
+
+    public void setWriteBackHandler(WriteBackHandler handler) {
+        writeBackHandler = handler;
+    }
+
+    public void addChildStream(KaitaiStream child) {
+        childStreams.add(child);
+    }
+
+    public void writeBackChildStreams() {
+        writeBackChildStreams(null);
+    }
+
+    protected void writeBackChildStreams(KaitaiStream parent) {
+        final long _pos = pos();
+        for (KaitaiStream child : childStreams) {
+            child.writeBackChildStreams(this);
+        }
+        childStreams.clear();
+        seek(_pos);
+        if (parent != null) {
+            writeBack(parent);
+        }
+    }
+
+    protected void writeBack(KaitaiStream parent) {
+        writeBackHandler.writeBack(parent);
     }
 
     /**

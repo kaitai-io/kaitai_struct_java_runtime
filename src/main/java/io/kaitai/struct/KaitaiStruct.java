@@ -61,12 +61,24 @@ public class KaitaiStruct {
         public ReadWrite(KaitaiStream _io) {
             super(_io);
         }
-        public abstract void _write();
+        public abstract void _write_Seq();
         public abstract void _check();
+        public abstract void _fetchInstances(); // FIXME: perhaps move directly into KaitaiStruct
+
+        public void _write() {
+            _write_Seq();
+            _fetchInstances();
+            _io.writeBackChildStreams();
+        }
 
         public void _write(KaitaiStream io) {
             this._io = io;
             _write();
+        }
+
+        public void _write_Seq(KaitaiStream io) {
+            this._io = io;
+            _write_Seq();
         }
     }
 }
