@@ -603,6 +603,7 @@ public abstract class KaitaiStream implements Closeable {
     public static byte[] unprocessZlib(byte[] data) {
         Deflater dfl = new Deflater();
         dfl.setInput(data);
+        dfl.finish();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte buf[] = new byte[ZLIB_BUF_SIZE];
         while (!dfl.finished()) {
