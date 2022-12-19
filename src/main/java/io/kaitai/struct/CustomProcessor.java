@@ -24,24 +24,25 @@
 package io.kaitai.struct;
 
 /**
- * A custom decoder interface. Implementing classes can be called from inside a
- * .ksy file using `process: XXX` syntax.
+ * A custom encoder/decoder interface. Implementing classes can be called from
+ * inside a .ksy file using {@code process: XXX} syntax.
  * <p>
- * This interface is sufficient for custom processing routines that will only be
- * used from generated format libraries that are read-only (only capable of
- * parsing, not serialization). To support generated source files compiled in
- * {@code --read-write} mode, implement {@link CustomProcessor} instead.
+ * Custom processing classes which need to be used from .ksy files that will be
+ * compiled in {@code --read-write} mode should implement this interface. For
+ * generated format libraries that are read-only (only capable of parsing, not
+ * serialization), it's enough to implement {@link CustomDecoder}.
  */
-public interface CustomDecoder {
+public interface CustomProcessor extends CustomDecoder {
     /**
-     * Decodes a given byte array, according to some custom algorithm
-     * (specific to implementing class) and parameters given in the
-     * constructor, returning another byte array.
+     * Encodes a given byte array, according to some custom algorithm (specific
+     * to implementing class) and parameters given in the constructor, returning
+     * another byte array.
      * <p>
-     * This method is used in parsing. Its counterpart is
-     * {@link CustomProcessor#encode(byte[])}, which is used in serialization.
+     * This method is used in serialization. The inverse operation is
+     * {@link #decode(byte[])}, which must return the same byte array as
+     * {@code src} when given the encoded byte array returned by this method.
      * @param src source byte array
-     * @return decoded byte array
+     * @return encoded byte array
      */
-    byte[] decode(byte[] src);
+    byte[] encode(byte[] src);
 }
