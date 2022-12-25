@@ -59,6 +59,7 @@ import java.util.zip.Deflater;
 public abstract class KaitaiStream implements Closeable {
     protected int bitsLeft = 0;
     protected long bits = 0;
+    protected boolean bitsLe = false;
 
     protected WriteBackHandler writeBackHandler;
 
@@ -216,7 +217,7 @@ public abstract class KaitaiStream implements Closeable {
             }
 
             long newBits = res;
-            res = res >>> bitsLeft | bits << bitsNeeded;
+            res = res >>> bitsLeft | (bitsNeeded < 64 ? bits << bitsNeeded : 0);
             bits = newBits; // will be masked at the end of the function
         } else {
             res = bits >>> -bitsNeeded; // shift unneeded bits out
@@ -431,6 +432,137 @@ public abstract class KaitaiStream implements Closeable {
     abstract public void writeF8le(double v);
 
     //endregion
+
+    //endregion
+
+    //region Unaligned bit values
+
+    public void writeAlignToByte() {
+        if (bitsLeft > 0) {
+            byte b = (byte) bits;
+            if (!bitsLe) {
+                b <<= 8 - bitsLeft;
+            }
+            writeS1(b);
+            alignToByte();
+        }
+    }
+
+    /*
+        Example 1 (bytesToWrite > 0):
+
+        old bitsLeft = 5
+            | |          new bitsLeft = 18 mod 8 = 2
+           /   \             /\
+          |01101xxx|xxxxxxxx|xx......|
+           \    \             /
+            \    \__ n = 13 _/
+             \              /
+              \____________/
+             bitsToWrite = 18  ->  bytesToWrite = 2
+
+        ---
+
+        Example 2 (bytesToWrite == 0):
+
+           old bitsLeft = 1
+                |   |
+                 \ /
+        |01101100|1xxxxx..|........|
+                 / \___/\
+                /  n = 5 \
+               /__________\
+             bitsToWrite = 6  ->  bytesToWrite = 0,
+                                  new bitsLeft = 6 mod 8 = 6
+     */
+    public void writeBitsIntBe(int n, long val) {
+        bitsLe = false;
+
+        if (n < 64) {
+            long mask = (1L << n) - 1;
+            val &= mask;
+        }
+        // if `n == 64`, do nothing
+
+        int bitsToWrite = bitsLeft + n;
+        int bytesToWrite = bitsToWrite / 8;
+
+        bitsLeft = bitsToWrite & 7; // `bitsToWrite mod 8`
+
+        if (bytesToWrite > 0) {
+            byte[] buf = new byte[bytesToWrite];
+
+            long mask = (1L << bitsLeft) - 1; // `bitsLeft` is in range 0..7, so `(1L << 64)` does not have to be considered
+            long newBits = val & mask;
+            val = val >>> bitsLeft | (n - bitsLeft < 64 ? bits << (n - bitsLeft) : 0);
+            bits = newBits;
+
+            for (int i = bytesToWrite - 1; i >= 0; i--) {
+                buf[i] = (byte) (val & 0xff);
+                val >>>= 8;
+            }
+            writeBytes(buf);
+        } else {
+            bits = bits << n | val;
+        }
+    }
+
+    /*
+        Example 1 (bytesToWrite > 0):
+
+        n = 13
+
+           old bitsLeft = 5
+               | |             new bitsLeft = 18 mod 8 = 2
+              /   \                /\
+          |xxx01101|xxxxxxxx|......xx|
+           \               /      / /
+            ---------------       --
+                      \           /
+                     bitsToWrite = 18  ->  bytesToWrite = 2
+
+        ---
+
+        Example 2 (bytesToWrite == 0):
+
+                  old bitsLeft = 1
+                       |   |
+                        \ /
+        |01101100|..xxxxx1|........|
+                   /\___/ \
+                  / n = 5  \
+                 /__________\
+               bitsToWrite = 6  ->  bytesToWrite = 0,
+                                    new bitsLeft = 6 mod 8 = 6
+     */
+    public void writeBitsIntLe(int n, long val) {
+        bitsLe = true;
+
+        int bitsToWrite = bitsLeft + n;
+        int bytesToWrite = bitsToWrite / 8;
+
+        int oldBitsLeft = bitsLeft;
+        bitsLeft = bitsToWrite & 7; // `bitsToWrite mod 8`
+
+        if (bytesToWrite > 0) {
+            byte[] buf = new byte[bytesToWrite];
+
+            long newBits = n - bitsLeft < 64 ? val >>> (n - bitsLeft) : 0;
+            val = val << oldBitsLeft | bits;
+            bits = newBits;
+
+            for (int i = 0; i < bytesToWrite; i++) {
+                buf[i] = (byte) (val & 0xff);
+                val >>>= 8;
+            }
+            writeBytes(buf);
+        } else {
+            bits |= val << oldBitsLeft;
+        }
+
+        long mask = (1L << bitsLeft) - 1; // `bitsLeft` is in range 0..7, so `(1L << 64)` does not have to be considered
+        bits &= mask;
+    }
 
     //endregion
 
