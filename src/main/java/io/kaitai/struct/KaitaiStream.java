@@ -576,7 +576,9 @@ public abstract class KaitaiStream implements Closeable {
 
     abstract public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte);
 
-    abstract public void writeStream(KaitaiStream other);
+    public void writeStream(KaitaiStream other) {
+        writeBytes(other.toByteArray());
+    }
 
     //endregion
 

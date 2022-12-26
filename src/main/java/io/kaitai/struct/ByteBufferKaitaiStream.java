@@ -557,11 +557,6 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
         }
     }
 
-    @Override
-    public void writeStream(KaitaiStream other) {
-        bb.put(other.toByteArray());
-    }
-
     //endregion
 
     //endregion
