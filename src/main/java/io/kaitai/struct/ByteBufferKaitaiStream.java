@@ -166,6 +166,11 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public void seek(int newPos) {
+        if (bitsWriteMode) {
+            writeAlignToByte();
+        } else {
+            alignToByte();
+        }
         bb.position(newPos);
     }
 
@@ -174,7 +179,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
         if (newPos > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Java ByteBuffer can't be seeked past Integer.MAX_VALUE");
         }
-        bb.position((int) newPos);
+        seek((int) newPos);
     }
 
     @Override
@@ -201,6 +206,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public byte readS1() {
+        alignToByte();
         return bb.get();
     }
 
@@ -208,18 +214,21 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public short readS2be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getShort();
     }
 
     @Override
     public int readS4be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getInt();
     }
 
     @Override
     public long readS8be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getLong();
     }
@@ -230,18 +239,21 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public short readS2le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getShort();
     }
 
     @Override
     public int readS4le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getInt();
     }
 
     @Override
     public long readS8le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getLong();
     }
@@ -254,6 +266,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU1() {
+        alignToByte();
         return bb.get() & 0xff;
     }
 
@@ -261,12 +274,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU2be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getShort() & 0xffff;
     }
 
     @Override
     public long readU4be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getInt() & 0xffffffffL;
     }
@@ -277,12 +292,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU2le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getShort() & 0xffff;
     }
 
     @Override
     public long readU4le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getInt() & 0xffffffffL;
     }
@@ -299,12 +316,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public float readF4be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getFloat();
     }
 
     @Override
     public double readF8be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getDouble();
     }
@@ -315,12 +334,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public float readF4le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getFloat();
     }
 
     @Override
     public double readF8le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getDouble();
     }
@@ -338,6 +359,12 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public byte[] readBytes(long n) {
+        alignToByte();
+        return readBytesNotAligned(n);
+    }
+
+    @Override
+    protected byte[] readBytesNotAligned(long n) {
         byte[] buf = new byte[toByteArrayLength(n)];
         bb.get(buf);
         return buf;
@@ -349,6 +376,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public byte[] readBytesFull() {
+        alignToByte();
         byte[] buf = new byte[bb.remaining()];
         bb.get(buf);
         return buf;
@@ -356,6 +384,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+        alignToByte();
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         while (true) {
             if (!bb.hasRemaining()) {
@@ -392,6 +421,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public void writeS1(byte v) {
+        writeAlignToByte();
         bb.put(v);
     }
 
@@ -399,18 +429,21 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeS2be(short v) {
+        writeAlignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         bb.putShort(v);
     }
 
     @Override
     public void writeS4be(int v) {
+        writeAlignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         bb.putInt(v);
     }
 
     @Override
     public void writeS8be(long v) {
+        writeAlignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         bb.putLong(v);
     }
@@ -421,18 +454,21 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeS2le(short v) {
+        writeAlignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         bb.putShort(v);
     }
 
     @Override
     public void writeS4le(int v) {
+        writeAlignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         bb.putInt(v);
     }
 
     @Override
     public void writeS8le(long v) {
+        writeAlignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         bb.putLong(v);
     }
@@ -445,6 +481,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeU1(int v) {
+        writeAlignToByte();
         bb.put((byte) v);
     }
 
@@ -452,18 +489,21 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeU2be(int v) {
+        writeAlignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         bb.putShort((short) v);
     }
 
     @Override
     public void writeU4be(long v) {
+        writeAlignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         bb.putInt((int) v);
     }
 
     @Override
     public void writeU8be(long v) {
+        writeAlignToByte();
         writeS8be(v);
     }
 
@@ -473,18 +513,21 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeU2le(int v) {
+        writeAlignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         bb.putShort((short) v);
     }
 
     @Override
     public void writeU4le(long v) {
+        writeAlignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         bb.putInt((int) v);
     }
 
     @Override
     public void writeU8le(long v) {
+        writeAlignToByte();
         writeS8le(v);
     }
 
@@ -500,12 +543,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeF4be(float v) {
+        writeAlignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         bb.putFloat(v);
     }
 
     @Override
     public void writeF8be(double v) {
+        writeAlignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         bb.putDouble(v);
     }
@@ -516,12 +561,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeF4le(float v) {
+        writeAlignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         bb.putFloat(v);
     }
 
     @Override
     public void writeF8le(double v) {
+        writeAlignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         bb.putDouble(v);
     }
@@ -538,11 +585,18 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public void writeBytes(byte[] buf) {
+        writeAlignToByte();
+        writeBytesNotAligned(buf);
+    }
+
+    @Override
+    protected void writeBytesNotAligned(byte[] buf) {
         bb.put(buf);
     }
 
     @Override
     public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte) {
+        writeAlignToByte();
         int len = buf.length;
         bb.put(buf);
         if (len < size) {

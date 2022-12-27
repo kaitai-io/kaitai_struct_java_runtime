@@ -60,6 +60,7 @@ public abstract class KaitaiStream implements Closeable {
     protected int bitsLeft = 0;
     protected long bits = 0;
     protected boolean bitsLe = false;
+    protected boolean bitsWriteMode = false;
 
     protected WriteBackHandler writeBackHandler;
 
@@ -200,6 +201,8 @@ public abstract class KaitaiStream implements Closeable {
     }
 
     public long readBitsIntBe(int n) {
+        bitsWriteMode = false;
+
         long res = 0;
 
         int bitsNeeded = n - bitsLeft;
@@ -210,7 +213,7 @@ public abstract class KaitaiStream implements Closeable {
             // 8 bits => 1 byte
             // 9 bits => 2 bytes
             int bytesNeeded = ((bitsNeeded - 1) / 8) + 1; // `ceil(bitsNeeded / 8)`
-            byte[] buf = readBytes(bytesNeeded);
+            byte[] buf = readBytesNotAligned(bytesNeeded);
             for (byte b : buf) {
                 // `b` is signed byte, convert to unsigned using the "& 0xff" trick
                 res = res << 8 | (b & 0xff);
@@ -240,6 +243,8 @@ public abstract class KaitaiStream implements Closeable {
     }
 
     public long readBitsIntLe(int n) {
+        bitsWriteMode = false;
+
         long res = 0;
         int bitsNeeded = n - bitsLeft;
 
@@ -248,7 +253,7 @@ public abstract class KaitaiStream implements Closeable {
             // 8 bits => 1 byte
             // 9 bits => 2 bytes
             int bytesNeeded = ((bitsNeeded - 1) / 8) + 1; // `ceil(bitsNeeded / 8)`
-            byte[] buf = readBytes(bytesNeeded);
+            byte[] buf = readBytesNotAligned(bytesNeeded);
             for (int i = 0; i < bytesNeeded; i++) {
                 // `buf[i]` is signed byte, convert to unsigned using the "& 0xff" trick
                 res |= ((long) (buf[i] & 0xff)) << (i * 8);
@@ -286,6 +291,15 @@ public abstract class KaitaiStream implements Closeable {
      * @return read bytes as byte array
      */
     abstract public byte[] readBytes(long n);
+
+    /**
+     * Internal method to read the specified number of bytes from the stream. Unlike
+     * {@link #readBytes(long)}, it doesn't align the bit position to the next byte
+     * boundary.
+     * @param n number of bytes to read
+     * @return read bytes as a byte array
+     */
+    abstract protected byte[] readBytesNotAligned(long n);
 
     /**
      * Reads all the remaining bytes in a stream as byte array.
@@ -443,7 +457,7 @@ public abstract class KaitaiStream implements Closeable {
             if (!bitsLe) {
                 b <<= 8 - bitsLeft;
             }
-            writeS1(b);
+            writeBytesNotAligned(new byte[] { b });
             alignToByte();
         }
     }
@@ -477,6 +491,7 @@ public abstract class KaitaiStream implements Closeable {
      */
     public void writeBitsIntBe(int n, long val) {
         bitsLe = false;
+        bitsWriteMode = true;
 
         if (n < 64) {
             long mask = (1L << n) - 1;
@@ -501,7 +516,7 @@ public abstract class KaitaiStream implements Closeable {
                 buf[i] = (byte) (val & 0xff);
                 val >>>= 8;
             }
-            writeBytes(buf);
+            writeBytesNotAligned(buf);
         } else {
             bits = bits << n | val;
         }
@@ -537,6 +552,7 @@ public abstract class KaitaiStream implements Closeable {
      */
     public void writeBitsIntLe(int n, long val) {
         bitsLe = true;
+        bitsWriteMode = true;
 
         int bitsToWrite = bitsLeft + n;
         int bytesToWrite = bitsToWrite / 8;
@@ -555,7 +571,7 @@ public abstract class KaitaiStream implements Closeable {
                 buf[i] = (byte) (val & 0xff);
                 val >>>= 8;
             }
-            writeBytes(buf);
+            writeBytesNotAligned(buf);
         } else {
             bits |= val << oldBitsLeft;
         }
@@ -573,6 +589,14 @@ public abstract class KaitaiStream implements Closeable {
      * @param buf byte array to write
      */
     abstract public void writeBytes(byte[] buf);
+
+    /**
+     * Internal method to write the given byte array to the stream. Unlike
+     * {@link #writeBytes(byte[])}, it doesn't align the bit position to the next byte
+     * boundary.
+     * @param buf byte array to write
+     */
+    abstract protected void writeBytesNotAligned(byte[] buf);
 
     abstract public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte);
 
