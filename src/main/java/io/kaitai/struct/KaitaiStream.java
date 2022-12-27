@@ -432,68 +432,6 @@ public abstract class KaitaiStream implements Closeable {
 
     //endregion
 
-    //region Unaligned bit values
-
-    public void writeBitsInt(int n, long v) {
-        // Example 1 (n > bitsLeft):
-        //            pos()
-        // bitsLeft = 3 | bitShift = 10 -> numBytes = 2
-        //          \  \v/         \
-        //     |01101xxx|xxxxxxxx|xx......|  (x - the bits we want to write, . - no longer part of this field)
-        //      \   /\             /\    /
-        //       \ /  \__ n = 13 _/  \  /
-        //        V                   \/
-        //     already written bits | potentially written bits too - we should not assume that fields come always in sequence
-
-        // Example 2 (n < bitsLeft):
-        //                  pos()
-        //      bitsLeft = 7 |
-        //            /     \v
-        // |01101100|1xxxxx..|........|
-        //            \   /\/
-        //            n = 5 \__ bitShift = -2 -> numBytes = 0
-
-        int bitShift = n - bitsLeft;
-        int numBytes = bitShift > 0 ? (bitShift / 8 + (bitShift % 8 != 0 ? 1 : 0)) : 0; // ceiled integer division
-        int pos = pos();
-
-        if (bitsLeft > 0) {// if the last written byte is filled with partial value, we have to change it too
-            --pos;
-            ++numBytes;
-            bitShift += 8;
-        } else {
-            bitsLeft = 8;
-        }
-
-        byte[] buf = new byte[numBytes];
-        if (numBytes > 0) {
-            seek(pos);
-            buf[0] = readS1();
-        }
-        if (numBytes > 1) {
-            seek(pos + (numBytes - 1));
-            buf[numBytes - 1] = readS1();
-        }
-        seek(pos);
-
-        for (int i = 0; i < numBytes; i++) {
-            bitShift -= 8;
-            long mask = bitShift > 0 ? (1L << bitsLeft) - 1 : (1L << (bitsLeft + bitShift)) - 1 << (- bitShift);
-            long shifted = bitShift > 0 ? v >>> bitShift : v << (- bitShift);
-            buf[i] = (byte) ((buf[i] & (mask ^ 0xff)) | (shifted & mask));
-
-            if (i == 0) {
-                bitsLeft = 8;
-            }
-        }
-
-        writeBytes(buf);
-
-        bitsLeft = - bitShift;
-    }
-
-    //endregion
-
     //endregion
 
     //region Byte arrays
