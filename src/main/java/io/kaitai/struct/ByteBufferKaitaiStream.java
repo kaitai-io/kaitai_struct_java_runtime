@@ -118,8 +118,22 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     /**
-     * Closes the stream safely. If there was an open file associated with it, closes that file.
-     * For streams that were reading from in-memory array, does nothing.
+     * Closes the stream safely, writing the buffered bits to the underlying byte stream
+     * first (if applicable). If there was an open file associated with the stream, closes
+     * that file.
+     * <p>
+     * If the last read/write/seek operation in the stream was {@link #writeBitsIntBe(int, long)} or
+     * {@link #writeBitsIntLe(int, long)} and the stream ended at an unaligned bit
+     * position (i.e. not at a byte boundary), writes a final byte with buffered bits to
+     * the underlying stream before closing the stream.
+     * </p>
+     * <p>
+     * Regardless of whether the closure is successful or not, always relinquishes the
+     * underlying resources. In accordance with {@link java.io.Closeable#close()},
+     * subsequent calls have no effect. Once this method has been called, read and write
+     * operations, seeking or accessing the state using {@link #pos()}, {@link #size()} or
+     * {@link #isEof()} on this stream will typically throw a {@link NullPointerException}.
+     * </p>
      * @implNote
      * <p>
      * Unfortunately, there is no simple way to close memory-mapped {@link ByteBuffer} in
@@ -150,11 +164,29 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public void close() throws IOException {
-        if (fc != null) {
-            fc.close();
-            fc = null;
+        Exception exc = null;
+        try {
+            if (bitsWriteMode) {
+                writeAlignToByte();
+            }
+        } catch (Exception e) {
+            exc = e;
+            throw e;
+        } finally {
+            alignToByte();
+            bb = null;
+            if (fc != null) try {
+                fc.close();
+            } catch (IOException e) {
+                if (exc != null) {
+                    exc.addSuppressed(e);
+                } else {
+                    throw e;
+                }
+            } finally {
+                fc = null;
+            }
         }
-        bb = null;
     }
 
     //region Stream positioning
