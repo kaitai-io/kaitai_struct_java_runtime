@@ -193,7 +193,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public boolean isEof() {
-        return !(bb.hasRemaining() || bitsLeft > 0);
+        return !(bb.hasRemaining() || (!bitsWriteMode && bitsLeft > 0));
     }
 
     @Override
@@ -216,7 +216,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public int pos() {
-        return bb.position();
+        return bb.position() + ((bitsWriteMode && bitsLeft > 0) ? 1 : 0);
     }
 
     @Override
