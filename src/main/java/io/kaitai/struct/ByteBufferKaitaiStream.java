@@ -35,15 +35,15 @@ import java.nio.file.StandardOpenOption;
 /**
  * An implementation of {@link KaitaiStream} backed by a {@link ByteBuffer}.
  * It can be either a {@link MappedByteBuffer} backed by {@link FileChannel},
- * or a regular wrapper over a given byte array).
+ * or a regular wrapper over a given byte array.
  */
 public class ByteBufferKaitaiStream extends KaitaiStream {
     private FileChannel fc;
     private ByteBuffer bb;
 
     /**
-     * Initializes a stream, reading from a local file with specified fileName.
-     * Internally, FileChannel + MappedByteBuffer will be used.
+     * Initializes a stream, reading from a local file with specified {@code fileName}.
+     * Internally, {@link FileChannel} + {@link MappedByteBuffer} will be used.
      * @param fileName file to read
      * @throws IOException if file can't be read
      */
@@ -53,9 +53,10 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     /**
-     * Initializes a stream that will get data from given byte array when read.
-     * Internally, ByteBuffer wrapping given array will be used.
-     * @param arr byte array to read
+     * Initializes a stream that will get data from the given array on read and put data
+     * into the array on write. Internally, a {@link ByteBuffer} is used to wrap the given
+     * array.
+     * @param arr byte array to read from or write to
      */
     public ByteBufferKaitaiStream(byte[] arr) {
         fc = null;
@@ -63,8 +64,9 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     /**
-     * Initializes a stream that will get data from given ByteBuffer when read.
-     * @param buffer ByteBuffer to read
+     * Initializes a stream that will get data from given {@link ByteBuffer} on read and
+     * put data into it on write.
+     * @param buffer {@link ByteBuffer} to read from or write to
      */
     public ByteBufferKaitaiStream(ByteBuffer buffer) {
         fc = null;
@@ -72,8 +74,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     /**
-     * Initializes a stream that will write data into fixed byte buffer in
-     * memory.
+     * Initializes a stream that will write data into a fixed byte buffer in memory.
      * @param size size of buffer in bytes
      */
     public ByteBufferKaitaiStream(long size) {
@@ -110,7 +111,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * @return read-only {@link ByteBuffer} to access raw data for the associated type.
      */
     public ByteBuffer asRoBuffer() {
-        ByteBuffer retVal = this.bb.asReadOnlyBuffer();
+        ByteBuffer retVal = bb.asReadOnlyBuffer();
         retVal.rewind();
 
         return retVal;
@@ -121,7 +122,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * For streams that were reading from in-memory array, does nothing.
      * @implNote
      * <p>
-     * Unfortunately, there is no simple way to close memory-mapped ByteBuffer in
+     * Unfortunately, there is no simple way to close memory-mapped {@link ByteBuffer} in
      * Java and unmap underlying file. As {@link MappedByteBuffer} documentation suggests,
      * "mapped byte buffer and the file mapping that it represents remain valid until the
      * buffer itself is garbage-collected". Thus, the best we can do is to delete all
@@ -142,9 +143,10 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * </p>
      * <p>
      * For more examples and suggestions, see:
-     * <a href="https://stackoverflow.com/q/2972986">How to unmap a file from memory mapped using FileChannel in java?</a>
+     * <a href="https://stackoverflow.com/q/2972986">How to unmap a file from memory
+     * mapped using FileChannel in java?</a>
      * </p>
-     * @throws IOException if FileChannel can't be closed
+     * @throws IOException if {@link FileChannel} can't be closed
      */
     @Override
     public void close() throws IOException {
