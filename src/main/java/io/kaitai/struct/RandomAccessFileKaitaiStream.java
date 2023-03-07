@@ -57,6 +57,8 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
         raf.close();
     }
 
+    //region Stream positioning
+
     @Override
     public boolean isEof() {
         try {
@@ -103,6 +105,14 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    //endregion
+
+    //region Reading
+
+    //region Integer numbers
+
+    //region Signed
+
     @Override
     public byte readS1() {
         try {
@@ -116,6 +126,8 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
             throw new RuntimeException(e);
         }
     }
+
+    //region Big-endian
 
     @Override
     public short readS2be() {
@@ -156,6 +168,10 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
         return (b1 << 32) + (b2 << 0);
     }
 
+    //endregion
+
+    //region Little-endian
+
     @Override
     public short readS2le() {
         try {
@@ -195,6 +211,12 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
         return (b2 << 32) + (b1 << 0);
     }
 
+    //endregion
+
+    //endregion
+
+    //region Unsigned
+
     @Override
     public int readU1() {
         try {
@@ -208,6 +230,8 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
             throw new RuntimeException(e);
         }
     }
+
+    //region Big-endian
 
     @Override
     public int readU2be() {
@@ -241,6 +265,10 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    //endregion
+
+    //region Little-endian
+
     @Override
     public int readU2le() {
         try {
@@ -273,6 +301,12 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    //endregion
+
+    //endregion
+
+    //endregion
+
     //region Floating point numbers
 
     //region Big-endian
@@ -304,6 +338,8 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
     //endregion
 
     //endregion
+
+    //region Byte arrays
 
     @Override
     public byte[] readBytes(long n) {
@@ -362,6 +398,10 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
             throw new RuntimeException(e);
         }
     }
+
+    //endregion
+
+    //endregion
 
     //region Helper methods
 
