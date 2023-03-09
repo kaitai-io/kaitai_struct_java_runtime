@@ -27,8 +27,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * An implementation of {@link KaitaiStream} backed by a {@link RandomAccessFile}.
@@ -313,12 +311,12 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public float readF4be() {
-        return wrapBufferBe(4).getFloat();
+        return Float.intBitsToFloat(readS4be());
     }
 
     @Override
     public double readF8be() {
-        return wrapBufferBe(8).getDouble();
+        return Double.longBitsToDouble(readS8be());
     }
 
     //endregion
@@ -327,12 +325,12 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public float readF4le() {
-        return wrapBufferLe(4).getFloat();
+        return Float.intBitsToFloat(readS4le());
     }
 
     @Override
     public double readF8le() {
-        return wrapBufferLe(8).getDouble();
+        return Double.longBitsToDouble(readS8le());
     }
 
     //endregion
@@ -400,18 +398,6 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
     }
 
     //endregion
-
-    //endregion
-
-    //region Helper methods
-
-    private ByteBuffer wrapBufferLe(int count) {
-        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.LITTLE_ENDIAN);
-    }
-
-    private ByteBuffer wrapBufferBe(int count) {
-        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.BIG_ENDIAN);
-    }
 
     //endregion
 }
