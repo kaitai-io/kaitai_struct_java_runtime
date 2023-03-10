@@ -43,7 +43,7 @@ import java.io.RandomAccessFile;
  * offsets, even if you use a 64-bit platform.</li>
  * </ul>
  */
-public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
+public class RandomAccessFileKaitaiStream extends KaitaiStream {
     protected RandomAccessFile raf;
 
     public RandomAccessFileKaitaiStream(String fileName) throws IOException {
@@ -72,15 +72,16 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void seek(int newPos) {
-        try {
-            raf.seek(newPos);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        seek((long) newPos);
     }
 
     @Override
     public void seek(long newPos) {
+        if (bitsWriteMode) {
+            writeAlignToByte();
+        } else {
+            alignToByte();
+        }
         try {
             raf.seek(newPos);
         } catch (IOException e) {
@@ -117,6 +118,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public byte readS1() {
+        alignToByte();
         try {
             int t = raf.read();
             if (t < 0) {
@@ -133,6 +135,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public short readS2be() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -148,6 +151,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public int readS4be() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -165,6 +169,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public long readS8be() {
+        alignToByte();
         long b1 = readU4be();
         long b2 = readU4be();
         return (b1 << 32) + (b2 << 0);
@@ -176,6 +181,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public short readS2le() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -191,6 +197,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public int readS4le() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -208,6 +215,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public long readS8le() {
+        alignToByte();
         long b1 = readU4le();
         long b2 = readU4le();
         return (b2 << 32) + (b1 << 0);
@@ -221,6 +229,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU1() {
+        alignToByte();
         try {
             int t = raf.read();
             if (t < 0) {
@@ -237,6 +246,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU2be() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -252,6 +262,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public long readU4be() {
+        alignToByte();
         try {
             long b1 = raf.read();
             long b2 = raf.read();
@@ -273,6 +284,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU2le() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -288,6 +300,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public long readU4le() {
+        alignToByte();
         try {
             long b1 = raf.read();
             long b2 = raf.read();
@@ -344,7 +357,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
     //region Byte arrays
 
     @Override
-    public byte[] readBytes(long n) {
+    protected byte[] readBytesNotAligned(long n) {
         byte[] buf = new byte[toByteArrayLength(n)];
         try {
             int readCount = raf.read(buf);
@@ -361,6 +374,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public byte[] readBytesFull() {
+        alignToByte();
         byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -377,6 +391,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+        alignToByte();
         try {
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
             while (true) {
@@ -423,6 +438,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
      */
     @Override
     public void writeS1(byte v) {
+        writeAlignToByte();
         try {
             ensureBytesLeftToWrite(1);
             raf.write(v);
@@ -435,6 +451,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeS2be(short v) {
+        writeAlignToByte();
         try {
             ensureBytesLeftToWrite(2);
             raf.write((v >>> 8) & 0xFF);
@@ -446,6 +463,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeS4be(int v) {
+        writeAlignToByte();
         try {
             ensureBytesLeftToWrite(4);
             raf.write((v >>> 24) & 0xFF);
@@ -459,6 +477,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeS8be(long v) {
+        writeAlignToByte();
         try {
             ensureBytesLeftToWrite(8);
             raf.write((int)(v >>> 56) & 0xFF);
@@ -480,6 +499,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeS2le(short v) {
+        writeAlignToByte();
         try {
             ensureBytesLeftToWrite(2);
             raf.write((v >>> 0) & 0xFF);
@@ -491,6 +511,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeS4le(int v) {
+        writeAlignToByte();
         try {
             ensureBytesLeftToWrite(4);
             raf.write((v >>>  0) & 0xFF);
@@ -504,6 +525,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void writeS8le(long v) {
+        writeAlignToByte();
         try {
             ensureBytesLeftToWrite(8);
             raf.write((int)(v >>>  0) & 0xFF);
@@ -560,7 +582,7 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
     //region Byte arrays
 
     @Override
-    public void writeBytes(byte[] buf) {
+    protected void writeBytesNotAligned(byte[] buf) {
         try {
             ensureBytesLeftToWrite(buf.length);
             raf.write(buf);

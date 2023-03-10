@@ -384,17 +384,6 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     //region Byte arrays
 
-    /**
-     * Reads designated number of bytes from the stream.
-     * @param n number of bytes to read
-     * @return read bytes as byte array
-     */
-    @Override
-    public byte[] readBytes(long n) {
-        alignToByte();
-        return readBytesNotAligned(n);
-    }
-
     @Override
     protected byte[] readBytesNotAligned(long n) {
         byte[] buf = new byte[toByteArrayLength(n)];
@@ -552,16 +541,6 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     //endregion
 
     //region Byte arrays
-
-    /**
-     * Writes given byte array to the stream.
-     * @param buf byte array to write
-     */
-    @Override
-    public void writeBytes(byte[] buf) {
-        writeAlignToByte();
-        writeBytesNotAligned(buf);
-    }
 
     @Override
     protected void writeBytesNotAligned(byte[] buf) {

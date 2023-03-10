@@ -290,7 +290,10 @@ public abstract class KaitaiStream implements Closeable {
      * @param n number of bytes to read
      * @return read bytes as byte array
      */
-    abstract public byte[] readBytes(long n);
+    public byte[] readBytes(long n) {
+        alignToByte();
+        return readBytesNotAligned(n);
+    }
 
     /**
      * Internal method to read the specified number of bytes from the stream. Unlike
@@ -602,7 +605,10 @@ public abstract class KaitaiStream implements Closeable {
      * Writes given byte array to the stream.
      * @param buf byte array to write
      */
-    abstract public void writeBytes(byte[] buf);
+    public void writeBytes(byte[] buf) {
+        writeAlignToByte();
+        writeBytesNotAligned(buf);
+    }
 
     /**
      * Internal method to write the given byte array to the stream. Unlike
