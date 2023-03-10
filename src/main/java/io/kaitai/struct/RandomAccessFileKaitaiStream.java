@@ -404,4 +404,172 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
     //endregion
 
     //endregion
+
+    //region Writing
+
+    protected void ensureBytesLeftToWrite(long n) throws IOException {
+        long bytesLeft = raf.length() - raf.getFilePointer();
+        if (n > bytesLeft) {
+            throw new EOFException("requested to write " + n + " bytes, but only " + bytesLeft + " bytes left in the stream");
+        }
+    }
+
+    //region Integer numbers
+
+    //region Signed
+
+    /**
+     * Writes one signed 1-byte integer.
+     */
+    @Override
+    public void writeS1(byte v) {
+        try {
+            ensureBytesLeftToWrite(1);
+            raf.write(v);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //region Big-endian
+
+    @Override
+    public void writeS2be(short v) {
+        try {
+            ensureBytesLeftToWrite(2);
+            raf.write((v >>> 8) & 0xFF);
+            raf.write((v >>> 0) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void writeS4be(int v) {
+        try {
+            ensureBytesLeftToWrite(4);
+            raf.write((v >>> 24) & 0xFF);
+            raf.write((v >>> 16) & 0xFF);
+            raf.write((v >>>  8) & 0xFF);
+            raf.write((v >>>  0) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void writeS8be(long v) {
+        try {
+            ensureBytesLeftToWrite(8);
+            raf.write((int)(v >>> 56) & 0xFF);
+            raf.write((int)(v >>> 48) & 0xFF);
+            raf.write((int)(v >>> 40) & 0xFF);
+            raf.write((int)(v >>> 32) & 0xFF);
+            raf.write((int)(v >>> 24) & 0xFF);
+            raf.write((int)(v >>> 16) & 0xFF);
+            raf.write((int)(v >>>  8) & 0xFF);
+            raf.write((int)(v >>>  0) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    @Override
+    public void writeS2le(short v) {
+        try {
+            ensureBytesLeftToWrite(2);
+            raf.write((v >>> 0) & 0xFF);
+            raf.write((v >>> 8) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void writeS4le(int v) {
+        try {
+            ensureBytesLeftToWrite(4);
+            raf.write((v >>>  0) & 0xFF);
+            raf.write((v >>>  8) & 0xFF);
+            raf.write((v >>> 16) & 0xFF);
+            raf.write((v >>> 24) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void writeS8le(long v) {
+        try {
+            ensureBytesLeftToWrite(8);
+            raf.write((int)(v >>>  0) & 0xFF);
+            raf.write((int)(v >>>  8) & 0xFF);
+            raf.write((int)(v >>> 16) & 0xFF);
+            raf.write((int)(v >>> 24) & 0xFF);
+            raf.write((int)(v >>> 32) & 0xFF);
+            raf.write((int)(v >>> 40) & 0xFF);
+            raf.write((int)(v >>> 48) & 0xFF);
+            raf.write((int)(v >>> 56) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //endregion
+
+    //endregion
+
+    //endregion
+
+    //region Floating point numbers
+
+    //region Big-endian
+
+    @Override
+    public void writeF4be(float v) {
+        writeS4be(Float.floatToIntBits(v));
+    }
+
+    @Override
+    public void writeF8be(double v) {
+        writeS8be(Double.doubleToLongBits(v));
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    @Override
+    public void writeF4le(float v) {
+        writeS4le(Float.floatToIntBits(v));
+    }
+
+    @Override
+    public void writeF8le(double v) {
+        writeS8le(Double.doubleToLongBits(v));
+    }
+
+    //endregion
+
+    //endregion
+
+    //region Byte arrays
+
+    @Override
+    public void writeBytes(byte[] buf) {
+        try {
+            ensureBytesLeftToWrite(buf.length);
+            raf.write(buf);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //endregion
+
+    //endregion
 }
