@@ -568,23 +568,6 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
         bb.put(buf);
     }
 
-    @Override
-    public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte) {
-        writeAlignToByte();
-        int len = buf.length;
-        bb.put(buf);
-        if (len < size) {
-            bb.put(term);
-            long padLen = size - len - 1;
-            for (long i = 0; i < padLen; i++)
-                bb.put(padByte);
-        } else if (len > size) {
-            throw new IllegalArgumentException(
-                    "Writing " + size + " bytes, but " + len + " bytes were given"
-            );
-        }
-    }
-
     //endregion
 
     //endregion

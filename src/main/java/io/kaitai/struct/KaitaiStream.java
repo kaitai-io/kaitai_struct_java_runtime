@@ -612,7 +612,20 @@ public abstract class KaitaiStream implements Closeable {
      */
     abstract protected void writeBytesNotAligned(byte[] buf);
 
-    abstract public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte);
+    public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte) {
+        int len = buf.length;
+        writeBytes(buf);
+        if (len < size) {
+            writeS1(term);
+            long padLen = size - len - 1;
+            for (long i = 0; i < padLen; i++)
+                writeS1(padByte);
+        } else if (len > size) {
+            throw new IllegalArgumentException(
+                    "Writing " + size + " bytes, but " + len + " bytes were given"
+            );
+        }
+    }
 
     public void writeStream(KaitaiStream other) {
         writeBytes(other.toByteArray());
