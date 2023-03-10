@@ -403,25 +403,39 @@ public abstract class KaitaiStream implements Closeable {
 
     //region Unsigned
 
-    abstract public void writeU1(int v);
+    public void writeU1(int v) {
+        writeS1((byte) v);
+    }
 
     //region Big-endian
 
-    abstract public void writeU2be(int v);
+    public void writeU2be(int v) {
+        writeS2be((short) v);
+    }
 
-    abstract public void writeU4be(long v);
+    public void writeU4be(long v) {
+        writeS4be((int) v);
+    }
 
-    abstract public void writeU8be(long v);
+    public void writeU8be(long v) {
+        writeS8be(v);
+    }
 
     //endregion
 
     //region Little-endian
 
-    abstract public void writeU2le(int v);
+    public void writeU2le(int v) {
+        writeS2le((short) v);
+    }
 
-    abstract public void writeU4le(long v);
+    public void writeU4le(long v) {
+        writeS4le((int) v);
+    }
 
-    abstract public void writeU8le(long v);
+    public void writeU8le(long v) {
+        writeS8le(v);
+    }
 
     //endregion
 

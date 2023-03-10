@@ -509,64 +509,6 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     //endregion
 
-    //region Unsigned
-
-    @Override
-    public void writeU1(int v) {
-        writeAlignToByte();
-        bb.put((byte) v);
-    }
-
-    //region Big-endian
-
-    @Override
-    public void writeU2be(int v) {
-        writeAlignToByte();
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putShort((short) v);
-    }
-
-    @Override
-    public void writeU4be(long v) {
-        writeAlignToByte();
-        bb.order(ByteOrder.BIG_ENDIAN);
-        bb.putInt((int) v);
-    }
-
-    @Override
-    public void writeU8be(long v) {
-        writeAlignToByte();
-        writeS8be(v);
-    }
-
-    //endregion
-
-    //region Little-endian
-
-    @Override
-    public void writeU2le(int v) {
-        writeAlignToByte();
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putShort((short) v);
-    }
-
-    @Override
-    public void writeU4le(long v) {
-        writeAlignToByte();
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        bb.putInt((int) v);
-    }
-
-    @Override
-    public void writeU8le(long v) {
-        writeAlignToByte();
-        writeS8le(v);
-    }
-
-    //endregion
-
-    //endregion
-
     //endregion
 
     //region Floating point numbers
