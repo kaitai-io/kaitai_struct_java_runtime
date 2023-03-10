@@ -50,6 +50,10 @@ public abstract class RandomAccessFileKaitaiStream extends KaitaiStream {
         raf = new RandomAccessFile(fileName, "r");
     }
 
+    public RandomAccessFileKaitaiStream(RandomAccessFile raf) {
+        this.raf = raf;
+    }
+
     @Override
     public void close() throws IOException {
         raf.close();
