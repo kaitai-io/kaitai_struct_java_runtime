@@ -84,7 +84,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     @Override
     public boolean isEof() {
         try {
-            return !(raf.getFilePointer() < raf.length() || bitsLeft > 0);
+            return !(raf.getFilePointer() < raf.length() || (!bitsWriteMode && bitsLeft > 0));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -113,7 +113,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     public int pos() {
         try {
             // FIXME cast
-            return (int) raf.getFilePointer();
+            return (int) raf.getFilePointer() + ((bitsWriteMode && bitsLeft > 0) ? 1 : 0);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
