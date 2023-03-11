@@ -56,7 +56,27 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void close() throws IOException {
-        raf.close();
+        Exception exc = null;
+        try {
+            if (bitsWriteMode) {
+                writeAlignToByte();
+            }
+        } catch (Exception e) {
+            exc = e;
+            throw e;
+        } finally {
+            alignToByte();
+            try {
+                raf.close();
+            } catch (IOException e) {
+                if (exc != null) {
+                    // deliver RandomAccessFile.close() exception as primary, the one from
+                    // writeAlignToByte() as suppressed
+                    e.addSuppressed(exc);
+                }
+                throw e;
+            }
+        }
     }
 
     //region Stream positioning
