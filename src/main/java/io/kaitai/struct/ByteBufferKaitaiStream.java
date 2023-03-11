@@ -179,10 +179,11 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
                 fc.close();
             } catch (IOException e) {
                 if (exc != null) {
-                    exc.addSuppressed(e);
-                } else {
-                    throw e;
+                    // deliver FileChannel.close() exception as primary, the one from
+                    // writeAlignToByte() as suppressed
+                    e.addSuppressed(exc);
                 }
+                throw e;
             } finally {
                 fc = null;
             }
