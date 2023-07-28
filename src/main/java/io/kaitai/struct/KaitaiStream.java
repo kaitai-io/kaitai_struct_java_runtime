@@ -25,6 +25,7 @@ package io.kaitai.struct;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -373,6 +374,15 @@ public abstract class KaitaiStream implements Closeable {
 
     //region Writing
 
+    protected void ensureBytesLeftToWrite(long n, long pos) {
+        long bytesLeft = size() - pos;
+        if (n > bytesLeft) {
+            throw new RuntimeException(
+                    new EOFException("requested to write " + n + " bytes, but only " + bytesLeft + " bytes left in the stream")
+            );
+        }
+    }
+
     //region Integer numbers
 
     //region Signed
@@ -474,8 +484,11 @@ public abstract class KaitaiStream implements Closeable {
             if (!bitsLe) {
                 b <<= 8 - bitsLeft;
             }
-            writeBytesNotAligned(new byte[] { b });
+            // See https://github.com/kaitai-io/kaitai_struct_python_runtime/blob/704995ac/kaitaistruct.py#L572-L596
+            // for an explanation of why we call alignToByte() before
+            // writeBytesNotAligned().
             alignToByte();
+            writeBytesNotAligned(new byte[] { b });
         }
     }
 
@@ -517,8 +530,15 @@ public abstract class KaitaiStream implements Closeable {
         // if `n == 64`, do nothing
 
         int bitsToWrite = bitsLeft + n;
-        int bytesToWrite = bitsToWrite / 8;
+        int bytesNeeded = ((bitsToWrite - 1) / 8) + 1; // `ceil(bitsToWrite / 8)`
 
+        // pos() respects the `bitsLeft` field (it returns the stream position
+        // as if it were already aligned on a byte boundary), which ensures that
+        // we report the same numbers of bytes here as readBitsInt*() methods
+        // would.
+        ensureBytesLeftToWrite(bytesNeeded - (bitsLeft > 0 ? 1 : 0), pos());
+
+        int bytesToWrite = bitsToWrite / 8;
         bitsLeft = bitsToWrite & 7; // `bitsToWrite mod 8`
 
         if (bytesToWrite > 0) {
@@ -572,8 +592,15 @@ public abstract class KaitaiStream implements Closeable {
         bitsWriteMode = true;
 
         int bitsToWrite = bitsLeft + n;
-        int bytesToWrite = bitsToWrite / 8;
+        int bytesNeeded = ((bitsToWrite - 1) / 8) + 1; // `ceil(bitsToWrite / 8)`
 
+        // pos() respects the `bitsLeft` field (it returns the stream position
+        // as if it were already aligned on a byte boundary), which ensures that
+        // we report the same numbers of bytes here as readBitsInt*() methods
+        // would.
+        ensureBytesLeftToWrite(bytesNeeded - (bitsLeft > 0 ? 1 : 0), pos());
+
+        int bytesToWrite = bitsToWrite / 8;
         int oldBitsLeft = bitsLeft;
         bitsLeft = bitsToWrite & 7; // `bitsToWrite mod 8`
 

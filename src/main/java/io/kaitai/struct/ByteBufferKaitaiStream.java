@@ -173,7 +173,6 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
             exc = e;
             throw e;
         } finally {
-            alignToByte();
             bb = null;
             if (fc != null) try {
                 fc.close();

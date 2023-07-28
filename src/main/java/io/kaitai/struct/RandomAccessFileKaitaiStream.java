@@ -443,10 +443,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     //region Writing
 
     protected void ensureBytesLeftToWrite(long n) throws IOException {
-        long bytesLeft = raf.length() - raf.getFilePointer();
-        if (n > bytesLeft) {
-            throw new EOFException("requested to write " + n + " bytes, but only " + bytesLeft + " bytes left in the stream");
-        }
+        ensureBytesLeftToWrite(n, raf.getFilePointer());
     }
 
     //region Integer numbers
