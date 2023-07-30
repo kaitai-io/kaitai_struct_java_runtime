@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2022 Kaitai Project: MIT license
+ * Copyright 2015-2023 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -24,17 +24,22 @@
 package io.kaitai.struct;
 
 /**
- * Custom decoder interface allows implementation of "byte array in - byte array
- * out" decoders, compatible with Kaitai Struct. Classes implementing this
- * interface can be called rom inside a .ksy file using `process: XXX` syntax.
- * @see <a href="https://doc.kaitai.io/user_guide.html#custom-process">Kaitai
- *     Struct documentation on custom processing routines</a>
+ * A custom decoder interface. Implementing classes can be called from inside a
+ * .ksy file using `process: XXX` syntax.
+ * <p>
+ * This interface is sufficient for custom processing routines that will only be
+ * used from generated format libraries that are read-only (only capable of
+ * parsing, not serialization). To support generated source files compiled in
+ * {@code --read-write} mode, implement {@link CustomProcessor} instead.
  */
 public interface CustomDecoder {
     /**
      * Decodes a given byte array, according to some custom algorithm
      * (specific to implementing class) and parameters given in the
      * constructor, returning another byte array.
+     * <p>
+     * This method is used in parsing. Its counterpart is
+     * {@link CustomProcessor#encode(byte[])}, which is used in serialization.
      * @param src source byte array
      * @return decoded byte array
      */

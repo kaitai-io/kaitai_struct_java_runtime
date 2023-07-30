@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2022 Kaitai Project: MIT license
+ * Copyright 2015-2023 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -40,4 +40,45 @@ public class KaitaiStruct {
 
     public KaitaiStream _io() { return _io; }
     public KaitaiStruct _parent() { return _parent; }
+
+    /**
+     * KaitaiStruct object that supports reading from a supplied stream object.
+     */
+    public abstract static class ReadOnly extends KaitaiStruct {
+        public ReadOnly(KaitaiStream _io) {
+            super(_io);
+        }
+        public abstract void _read();
+    }
+
+    /**
+     * KaitaiStruct object that supports both reading from a given stream
+     * object, and writing to a pre-supplied stream object or to a
+     * stream object given explicitly. This also defines a few useful
+     * shortcut methods.
+     */
+    public abstract static class ReadWrite extends ReadOnly {
+        public ReadWrite(KaitaiStream _io) {
+            super(_io);
+        }
+        public abstract void _write_Seq();
+        public abstract void _check();
+        public abstract void _fetchInstances(); // FIXME: perhaps move directly into KaitaiStruct
+
+        public void _write() {
+            _write_Seq();
+            _fetchInstances();
+            _io.writeBackChildStreams();
+        }
+
+        public void _write(KaitaiStream io) {
+            this._io = io;
+            _write();
+        }
+
+        public void _write_Seq(KaitaiStream io) {
+            this._io = io;
+            _write_Seq();
+        }
+    }
 }

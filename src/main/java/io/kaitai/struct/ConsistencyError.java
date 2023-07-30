@@ -20,37 +20,29 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.kaitai.struct.annotations;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package io.kaitai.struct;
 
-/**
- * Annotation, that applied to fields, getters or setters that represents instance
- * field from {@code instances} KSY element.
- *
- * @since 0.9
- */
-@Documented
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.METHOD})
-public @interface Instance {
-    /**
-     * Original identifier ({@code id} key) from {@code ksy} file.
-     *
-     * @return Identifier, that can differ from instance name, if it clash with
-     *         Java reserved words. Can not be empty
-     */
-    String id();
-    /**
-     * Documentation string attached to the instance definition, specified in {@code doc}
-     * KSY element.
-     *
-     * @return Documentation string for an instance. If documentation is missed,
-     *         returns empty string
-     */
-    String doc();
+public class ConsistencyError extends RuntimeException {
+    private final String id;
+    private final Object actual;
+    private final Object expected;
+
+    public ConsistencyError(String id, Object actual, Object expected) {
+        super("Check failed: " + id + ", expected: " + expected + ", actual: " + actual);
+
+        this.id = id;
+        this.actual = actual;
+        this.expected = expected;
+    }
+
+    public String id() { return id; }
+    public Object actual() { return actual; }
+    public Object expected() { return expected; }
+
+    public static class SizeMismatch extends ConsistencyError {
+        public SizeMismatch(String id, long actual, long expected) {
+            super(id, actual, expected);
+        }
+    }
 }

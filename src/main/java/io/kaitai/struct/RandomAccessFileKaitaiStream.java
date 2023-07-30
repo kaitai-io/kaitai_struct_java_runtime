@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2022 Kaitai Project: MIT license
+ * Copyright 2015-2023 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -27,8 +27,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * An implementation of {@link KaitaiStream} backed by a {@link RandomAccessFile}.
@@ -52,15 +50,41 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
         raf = new RandomAccessFile(fileName, "r");
     }
 
+    public RandomAccessFileKaitaiStream(RandomAccessFile raf) {
+        this.raf = raf;
+    }
+
     @Override
     public void close() throws IOException {
-        raf.close();
+        Exception exc = null;
+        try {
+            if (bitsWriteMode) {
+                writeAlignToByte();
+            }
+        } catch (Exception e) {
+            exc = e;
+            throw e;
+        } finally {
+            alignToByte();
+            try {
+                raf.close();
+            } catch (IOException e) {
+                if (exc != null) {
+                    // deliver RandomAccessFile.close() exception as primary, the one from
+                    // writeAlignToByte() as suppressed
+                    e.addSuppressed(exc);
+                }
+                throw e;
+            }
+        }
     }
+
+    //region Stream positioning
 
     @Override
     public boolean isEof() {
         try {
-            return !(raf.getFilePointer() < raf.length() || bitsLeft > 0);
+            return !(raf.getFilePointer() < raf.length() || (!bitsWriteMode && bitsLeft > 0));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -68,15 +92,16 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public void seek(int newPos) {
-        try {
-            raf.seek(newPos);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        seek((long) newPos);
     }
 
     @Override
     public void seek(long newPos) {
+        if (bitsWriteMode) {
+            writeAlignToByte();
+        } else {
+            alignToByte();
+        }
         try {
             raf.seek(newPos);
         } catch (IOException e) {
@@ -88,7 +113,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     public int pos() {
         try {
             // FIXME cast
-            return (int) raf.getFilePointer();
+            return (int) raf.getFilePointer() + ((bitsWriteMode && bitsLeft > 0) ? 1 : 0);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -103,8 +128,17 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    //endregion
+
+    //region Reading
+
+    //region Integer numbers
+
+    //region Signed
+
     @Override
     public byte readS1() {
+        alignToByte();
         try {
             int t = raf.read();
             if (t < 0) {
@@ -117,8 +151,11 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    //region Big-endian
+
     @Override
     public short readS2be() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -134,6 +171,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public int readS4be() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -151,13 +189,19 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public long readS8be() {
+        alignToByte();
         long b1 = readU4be();
         long b2 = readU4be();
         return (b1 << 32) + (b2 << 0);
     }
 
+    //endregion
+
+    //region Little-endian
+
     @Override
     public short readS2le() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -173,6 +217,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public int readS4le() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -190,13 +235,21 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public long readS8le() {
+        alignToByte();
         long b1 = readU4le();
         long b2 = readU4le();
         return (b2 << 32) + (b1 << 0);
     }
 
+    //endregion
+
+    //endregion
+
+    //region Unsigned
+
     @Override
     public int readU1() {
+        alignToByte();
         try {
             int t = raf.read();
             if (t < 0) {
@@ -209,8 +262,11 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    //region Big-endian
+
     @Override
     public int readU2be() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -226,6 +282,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public long readU4be() {
+        alignToByte();
         try {
             long b1 = raf.read();
             long b2 = raf.read();
@@ -241,8 +298,13 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    //endregion
+
+    //region Little-endian
+
     @Override
     public int readU2le() {
+        alignToByte();
         try {
             int b1 = raf.read();
             int b2 = raf.read();
@@ -258,6 +320,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public long readU4le() {
+        alignToByte();
         try {
             long b1 = raf.read();
             long b2 = raf.read();
@@ -273,18 +336,24 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
         }
     }
 
+    //endregion
+
+    //endregion
+
+    //endregion
+
     //region Floating point numbers
 
     //region Big-endian
 
     @Override
     public float readF4be() {
-        return wrapBufferBe(4).getFloat();
+        return Float.intBitsToFloat(readS4be());
     }
 
     @Override
     public double readF8be() {
-        return wrapBufferBe(8).getDouble();
+        return Double.longBitsToDouble(readS8be());
     }
 
     //endregion
@@ -293,20 +362,22 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public float readF4le() {
-        return wrapBufferLe(4).getFloat();
+        return Float.intBitsToFloat(readS4le());
     }
 
     @Override
     public double readF8le() {
-        return wrapBufferLe(8).getDouble();
+        return Double.longBitsToDouble(readS8le());
     }
 
     //endregion
 
     //endregion
 
+    //region Byte arrays
+
     @Override
-    public byte[] readBytes(long n) {
+    protected byte[] readBytesNotAligned(long n) {
         byte[] buf = new byte[toByteArrayLength(n)];
         try {
             int readCount = raf.read(buf);
@@ -323,6 +394,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public byte[] readBytesFull() {
+        alignToByte();
         byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -339,6 +411,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
 
     @Override
     public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+        alignToByte();
         try {
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
             while (true) {
@@ -379,14 +452,179 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     }
 
     //region Helper methods
+    //endregion
 
-    private ByteBuffer wrapBufferLe(int count) {
-        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.LITTLE_ENDIAN);
+    //endregion
+
+    //region Writing
+
+    protected void ensureBytesLeftToWrite(long n) throws IOException {
+        ensureBytesLeftToWrite(n, raf.getFilePointer());
     }
 
-    private ByteBuffer wrapBufferBe(int count) {
-        return ByteBuffer.wrap(readBytes(count)).order(ByteOrder.BIG_ENDIAN);
+    //region Integer numbers
+
+    //region Signed
+
+    /**
+     * Writes one signed 1-byte integer.
+     */
+    @Override
+    public void writeS1(byte v) {
+        writeAlignToByte();
+        try {
+            ensureBytesLeftToWrite(1);
+            raf.write(v);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
+
+    //region Big-endian
+
+    @Override
+    public void writeS2be(short v) {
+        writeAlignToByte();
+        try {
+            ensureBytesLeftToWrite(2);
+            raf.write((v >>> 8) & 0xFF);
+            raf.write((v >>> 0) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void writeS4be(int v) {
+        writeAlignToByte();
+        try {
+            ensureBytesLeftToWrite(4);
+            raf.write((v >>> 24) & 0xFF);
+            raf.write((v >>> 16) & 0xFF);
+            raf.write((v >>>  8) & 0xFF);
+            raf.write((v >>>  0) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void writeS8be(long v) {
+        writeAlignToByte();
+        try {
+            ensureBytesLeftToWrite(8);
+            raf.write((int)(v >>> 56) & 0xFF);
+            raf.write((int)(v >>> 48) & 0xFF);
+            raf.write((int)(v >>> 40) & 0xFF);
+            raf.write((int)(v >>> 32) & 0xFF);
+            raf.write((int)(v >>> 24) & 0xFF);
+            raf.write((int)(v >>> 16) & 0xFF);
+            raf.write((int)(v >>>  8) & 0xFF);
+            raf.write((int)(v >>>  0) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    @Override
+    public void writeS2le(short v) {
+        writeAlignToByte();
+        try {
+            ensureBytesLeftToWrite(2);
+            raf.write((v >>> 0) & 0xFF);
+            raf.write((v >>> 8) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void writeS4le(int v) {
+        writeAlignToByte();
+        try {
+            ensureBytesLeftToWrite(4);
+            raf.write((v >>>  0) & 0xFF);
+            raf.write((v >>>  8) & 0xFF);
+            raf.write((v >>> 16) & 0xFF);
+            raf.write((v >>> 24) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void writeS8le(long v) {
+        writeAlignToByte();
+        try {
+            ensureBytesLeftToWrite(8);
+            raf.write((int)(v >>>  0) & 0xFF);
+            raf.write((int)(v >>>  8) & 0xFF);
+            raf.write((int)(v >>> 16) & 0xFF);
+            raf.write((int)(v >>> 24) & 0xFF);
+            raf.write((int)(v >>> 32) & 0xFF);
+            raf.write((int)(v >>> 40) & 0xFF);
+            raf.write((int)(v >>> 48) & 0xFF);
+            raf.write((int)(v >>> 56) & 0xFF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //endregion
+
+    //endregion
+
+    //endregion
+
+    //region Floating point numbers
+
+    //region Big-endian
+
+    @Override
+    public void writeF4be(float v) {
+        writeS4be(Float.floatToIntBits(v));
+    }
+
+    @Override
+    public void writeF8be(double v) {
+        writeS8be(Double.doubleToLongBits(v));
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    @Override
+    public void writeF4le(float v) {
+        writeS4le(Float.floatToIntBits(v));
+    }
+
+    @Override
+    public void writeF8le(double v) {
+        writeS8le(Double.doubleToLongBits(v));
+    }
+
+    //endregion
+
+    //endregion
+
+    //region Byte arrays
+
+    @Override
+    protected void writeBytesNotAligned(byte[] buf) {
+        try {
+            ensureBytesLeftToWrite(buf.length);
+            raf.write(buf);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //endregion
 
     //endregion
 }

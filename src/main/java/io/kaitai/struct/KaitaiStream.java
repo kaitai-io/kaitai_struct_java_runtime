@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2022 Kaitai Project: MIT license
+ * Copyright 2015-2023 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -25,10 +25,14 @@ package io.kaitai.struct;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
+import java.util.zip.Deflater;
 
 /**
  * KaitaiStream provides implementation of
@@ -56,6 +60,12 @@ import java.util.zip.Inflater;
 public abstract class KaitaiStream implements Closeable {
     protected int bitsLeft = 0;
     protected long bits = 0;
+    protected boolean bitsLe = false;
+    protected boolean bitsWriteMode = false;
+
+    protected WriteBackHandler writeBackHandler;
+
+    protected List<KaitaiStream> childStreams = new ArrayList<>();
 
     @Override
     abstract public void close() throws IOException;
@@ -93,6 +103,8 @@ public abstract class KaitaiStream implements Closeable {
     abstract public long size();
 
     //endregion
+
+    //region Reading
 
     //region Integer numbers
 
@@ -190,6 +202,8 @@ public abstract class KaitaiStream implements Closeable {
     }
 
     public long readBitsIntBe(int n) {
+        bitsWriteMode = false;
+
         long res = 0;
 
         int bitsNeeded = n - bitsLeft;
@@ -200,14 +214,14 @@ public abstract class KaitaiStream implements Closeable {
             // 8 bits => 1 byte
             // 9 bits => 2 bytes
             int bytesNeeded = ((bitsNeeded - 1) / 8) + 1; // `ceil(bitsNeeded / 8)`
-            byte[] buf = readBytes(bytesNeeded);
+            byte[] buf = readBytesNotAligned(bytesNeeded);
             for (byte b : buf) {
                 // `b` is signed byte, convert to unsigned using the "& 0xff" trick
                 res = res << 8 | (b & 0xff);
             }
 
             long newBits = res;
-            res = res >>> bitsLeft | bits << bitsNeeded;
+            res = res >>> bitsLeft | (bitsNeeded < 64 ? bits << bitsNeeded : 0);
             bits = newBits; // will be masked at the end of the function
         } else {
             res = bits >>> -bitsNeeded; // shift unneeded bits out
@@ -230,6 +244,8 @@ public abstract class KaitaiStream implements Closeable {
     }
 
     public long readBitsIntLe(int n) {
+        bitsWriteMode = false;
+
         long res = 0;
         int bitsNeeded = n - bitsLeft;
 
@@ -238,7 +254,7 @@ public abstract class KaitaiStream implements Closeable {
             // 8 bits => 1 byte
             // 9 bits => 2 bytes
             int bytesNeeded = ((bitsNeeded - 1) / 8) + 1; // `ceil(bitsNeeded / 8)`
-            byte[] buf = readBytes(bytesNeeded);
+            byte[] buf = readBytesNotAligned(bytesNeeded);
             for (int i = 0; i < bytesNeeded; i++) {
                 // `buf[i]` is signed byte, convert to unsigned using the "& 0xff" trick
                 res |= ((long) (buf[i] & 0xff)) << (i * 8);
@@ -275,7 +291,19 @@ public abstract class KaitaiStream implements Closeable {
      * @param n number of bytes to read
      * @return read bytes as byte array
      */
-    abstract public byte[] readBytes(long n);
+    public byte[] readBytes(long n) {
+        alignToByte();
+        return readBytesNotAligned(n);
+    }
+
+    /**
+     * Internal method to read the specified number of bytes from the stream. Unlike
+     * {@link #readBytes(long)}, it doesn't align the bit position to the next byte
+     * boundary.
+     * @param n number of bytes to read
+     * @return read bytes as a byte array
+     */
+    abstract protected byte[] readBytesNotAligned(long n);
 
     /**
      * Reads all the remaining bytes in a stream as byte array.
@@ -339,6 +367,304 @@ public abstract class KaitaiStream implements Closeable {
         }
         return (int) n;
     }
+
+    //endregion
+
+    //endregion
+
+    //region Writing
+
+    protected void ensureBytesLeftToWrite(long n, long pos) {
+        long bytesLeft = size() - pos;
+        if (n > bytesLeft) {
+            throw new RuntimeException(
+                    new EOFException("requested to write " + n + " bytes, but only " + bytesLeft + " bytes left in the stream")
+            );
+        }
+    }
+
+    //region Integer numbers
+
+    //region Signed
+
+    /**
+     * Writes one signed 1-byte integer.
+     */
+    abstract public void writeS1(byte v);
+
+    //region Big-endian
+
+    abstract public void writeS2be(short v);
+
+    abstract public void writeS4be(int v);
+
+    abstract public void writeS8be(long v);
+
+    //endregion
+
+    //region Little-endian
+
+    abstract public void writeS2le(short v);
+
+    abstract public void writeS4le(int v);
+
+    abstract public void writeS8le(long v);
+
+    //endregion
+
+    //endregion
+
+    //region Unsigned
+
+    public void writeU1(int v) {
+        writeS1((byte) v);
+    }
+
+    //region Big-endian
+
+    public void writeU2be(int v) {
+        writeS2be((short) v);
+    }
+
+    public void writeU4be(long v) {
+        writeS4be((int) v);
+    }
+
+    public void writeU8be(long v) {
+        writeS8be(v);
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    public void writeU2le(int v) {
+        writeS2le((short) v);
+    }
+
+    public void writeU4le(long v) {
+        writeS4le((int) v);
+    }
+
+    public void writeU8le(long v) {
+        writeS8le(v);
+    }
+
+    //endregion
+
+    //endregion
+
+    //endregion
+
+    //region Floating point numbers
+
+    //region Big-endian
+
+    abstract public void writeF4be(float v);
+
+    abstract public void writeF8be(double v);
+
+    //endregion
+
+    //region Little-endian
+
+    abstract public void writeF4le(float v);
+
+    abstract public void writeF8le(double v);
+
+    //endregion
+
+    //endregion
+
+    //region Unaligned bit values
+
+    public void writeAlignToByte() {
+        if (bitsLeft > 0) {
+            byte b = (byte) bits;
+            if (!bitsLe) {
+                b <<= 8 - bitsLeft;
+            }
+            // See https://github.com/kaitai-io/kaitai_struct_python_runtime/blob/704995ac/kaitaistruct.py#L572-L596
+            // for an explanation of why we call alignToByte() before
+            // writeBytesNotAligned().
+            alignToByte();
+            writeBytesNotAligned(new byte[] { b });
+        }
+    }
+
+    /*
+        Example 1 (bytesToWrite > 0):
+
+        old bitsLeft = 5
+            | |          new bitsLeft = 18 mod 8 = 2
+           /   \             /\
+          |01101xxx|xxxxxxxx|xx......|
+           \    \             /
+            \    \__ n = 13 _/
+             \              /
+              \____________/
+             bitsToWrite = 18  ->  bytesToWrite = 2
+
+        ---
+
+        Example 2 (bytesToWrite == 0):
+
+           old bitsLeft = 1
+                |   |
+                 \ /
+        |01101100|1xxxxx..|........|
+                 / \___/\
+                /  n = 5 \
+               /__________\
+             bitsToWrite = 6  ->  bytesToWrite = 0,
+                                  new bitsLeft = 6 mod 8 = 6
+     */
+    public void writeBitsIntBe(int n, long val) {
+        bitsLe = false;
+        bitsWriteMode = true;
+
+        if (n < 64) {
+            long mask = (1L << n) - 1;
+            val &= mask;
+        }
+        // if `n == 64`, do nothing
+
+        int bitsToWrite = bitsLeft + n;
+        int bytesNeeded = ((bitsToWrite - 1) / 8) + 1; // `ceil(bitsToWrite / 8)`
+
+        // pos() respects the `bitsLeft` field (it returns the stream position
+        // as if it were already aligned on a byte boundary), which ensures that
+        // we report the same numbers of bytes here as readBitsInt*() methods
+        // would.
+        ensureBytesLeftToWrite(bytesNeeded - (bitsLeft > 0 ? 1 : 0), pos());
+
+        int bytesToWrite = bitsToWrite / 8;
+        bitsLeft = bitsToWrite & 7; // `bitsToWrite mod 8`
+
+        if (bytesToWrite > 0) {
+            byte[] buf = new byte[bytesToWrite];
+
+            long mask = (1L << bitsLeft) - 1; // `bitsLeft` is in range 0..7, so `(1L << 64)` does not have to be considered
+            long newBits = val & mask;
+            val = val >>> bitsLeft | (n - bitsLeft < 64 ? bits << (n - bitsLeft) : 0);
+            bits = newBits;
+
+            for (int i = bytesToWrite - 1; i >= 0; i--) {
+                buf[i] = (byte) (val & 0xff);
+                val >>>= 8;
+            }
+            writeBytesNotAligned(buf);
+        } else {
+            bits = bits << n | val;
+        }
+    }
+
+    /*
+        Example 1 (bytesToWrite > 0):
+
+        n = 13
+
+           old bitsLeft = 5
+               | |             new bitsLeft = 18 mod 8 = 2
+              /   \                /\
+          |xxx01101|xxxxxxxx|......xx|
+           \               /      / /
+            ---------------       --
+                      \           /
+                     bitsToWrite = 18  ->  bytesToWrite = 2
+
+        ---
+
+        Example 2 (bytesToWrite == 0):
+
+                  old bitsLeft = 1
+                       |   |
+                        \ /
+        |01101100|..xxxxx1|........|
+                   /\___/ \
+                  / n = 5  \
+                 /__________\
+               bitsToWrite = 6  ->  bytesToWrite = 0,
+                                    new bitsLeft = 6 mod 8 = 6
+     */
+    public void writeBitsIntLe(int n, long val) {
+        bitsLe = true;
+        bitsWriteMode = true;
+
+        int bitsToWrite = bitsLeft + n;
+        int bytesNeeded = ((bitsToWrite - 1) / 8) + 1; // `ceil(bitsToWrite / 8)`
+
+        // pos() respects the `bitsLeft` field (it returns the stream position
+        // as if it were already aligned on a byte boundary), which ensures that
+        // we report the same numbers of bytes here as readBitsInt*() methods
+        // would.
+        ensureBytesLeftToWrite(bytesNeeded - (bitsLeft > 0 ? 1 : 0), pos());
+
+        int bytesToWrite = bitsToWrite / 8;
+        int oldBitsLeft = bitsLeft;
+        bitsLeft = bitsToWrite & 7; // `bitsToWrite mod 8`
+
+        if (bytesToWrite > 0) {
+            byte[] buf = new byte[bytesToWrite];
+
+            long newBits = n - bitsLeft < 64 ? val >>> (n - bitsLeft) : 0;
+            val = val << oldBitsLeft | bits;
+            bits = newBits;
+
+            for (int i = 0; i < bytesToWrite; i++) {
+                buf[i] = (byte) (val & 0xff);
+                val >>>= 8;
+            }
+            writeBytesNotAligned(buf);
+        } else {
+            bits |= val << oldBitsLeft;
+        }
+
+        long mask = (1L << bitsLeft) - 1; // `bitsLeft` is in range 0..7, so `(1L << 64)` does not have to be considered
+        bits &= mask;
+    }
+
+    //endregion
+
+    //region Byte arrays
+
+    /**
+     * Writes given byte array to the stream.
+     * @param buf byte array to write
+     */
+    public void writeBytes(byte[] buf) {
+        writeAlignToByte();
+        writeBytesNotAligned(buf);
+    }
+
+    /**
+     * Internal method to write the given byte array to the stream. Unlike
+     * {@link #writeBytes(byte[])}, it doesn't align the bit position to the next byte
+     * boundary.
+     * @param buf byte array to write
+     */
+    abstract protected void writeBytesNotAligned(byte[] buf);
+
+    public void writeBytesLimit(byte[] buf, long size, byte term, byte padByte) {
+        int len = buf.length;
+        writeBytes(buf);
+        if (len < size) {
+            writeS1(term);
+            long padLen = size - len - 1;
+            for (long i = 0; i < padLen; i++)
+                writeS1(padByte);
+        } else if (len > size) {
+            throw new IllegalArgumentException(
+                    "Writing " + size + " bytes, but " + len + " bytes were given"
+            );
+        }
+    }
+
+    public void writeStream(KaitaiStream other) {
+        writeBytes(other.toByteArray());
+    }
+
+    //endregion
 
     //endregion
 
@@ -427,6 +753,20 @@ public abstract class KaitaiStream implements Closeable {
             }
         }
         ifl.end();
+        return baos.toByteArray();
+    }
+
+    public static byte[] unprocessZlib(byte[] data) {
+        Deflater dfl = new Deflater();
+        dfl.setInput(data);
+        dfl.finish();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte buf[] = new byte[ZLIB_BUF_SIZE];
+        while (!dfl.finished()) {
+            int decBytes = dfl.deflate(buf);
+            baos.write(buf, 0, decBytes);
+        }
+        dfl.end();
         return baos.toByteArray();
     }
 
@@ -538,7 +878,79 @@ public abstract class KaitaiStream implements Closeable {
         return max;
     }
 
+    /**
+     * Returns the index of the first occurrence of the specified byte in a byte
+     * array, or -1 if this byte array does not contain the byte.
+     *
+     * @param arr byte array to search in
+     * @param b byte to search for
+     * @return index of the first occurrence of the specified byte in the byte
+     * array, or -1 if this byte array does not contain the byte
+     * @see java.util.List#indexOf(Object)
+     * @see String#indexOf(int)
+     */
+    public static int byteArrayIndexOf(byte[] arr, byte b) {
+        int len = arr.length;
+        for (int i = 0; i < len; i++) {
+            if (arr[i] == b) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     //endregion
+
+    public byte[] toByteArray() {
+        long pos = pos();
+        seek(0);
+        byte[] r = readBytesFull();
+        seek(pos);
+        return r;
+    }
+
+    public abstract static class WriteBackHandler {
+        protected final long pos;
+
+        public WriteBackHandler(long pos) {
+            this.pos = pos;
+        }
+
+        public void writeBack(KaitaiStream parent) {
+            parent.seek(pos);
+            write(parent);
+        }
+
+        protected abstract void write(KaitaiStream parent);
+    }
+
+    public void setWriteBackHandler(WriteBackHandler handler) {
+        writeBackHandler = handler;
+    }
+
+    public void addChildStream(KaitaiStream child) {
+        childStreams.add(child);
+    }
+
+    public void writeBackChildStreams() {
+        writeBackChildStreams(null);
+    }
+
+    protected void writeBackChildStreams(KaitaiStream parent) {
+        final long _pos = pos();
+        for (KaitaiStream child : childStreams) {
+            child.writeBackChildStreams(this);
+        }
+        childStreams.clear();
+        seek(_pos);
+        if (parent != null) {
+            writeBack(parent);
+        }
+    }
+
+    protected void writeBack(KaitaiStream parent) {
+        writeBackHandler.writeBack(parent);
+    }
 
     /**
      * Exception class for an error that occurs when some fixed content

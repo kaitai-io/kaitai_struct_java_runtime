@@ -20,43 +20,29 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.kaitai.struct.annotations;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package io.kaitai.struct;
 
 /**
- * Annotation, that applied to fields, getters or setters that represents parameter
- * from {@code params} KSY element.
- *
- * @since 0.9
+ * A custom encoder/decoder interface. Implementing classes can be called from
+ * inside a .ksy file using {@code process: XXX} syntax.
+ * <p>
+ * Custom processing classes which need to be used from .ksy files that will be
+ * compiled in {@code --read-write} mode should implement this interface. For
+ * generated format libraries that are read-only (only capable of parsing, not
+ * serialization), it's enough to implement {@link CustomDecoder}.
  */
-@Documented
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.METHOD})
-public @interface Parameter {
+public interface CustomProcessor extends CustomDecoder {
     /**
-     * Original identifier ({@code id} key) from {@code ksy} file.
-     *
-     * @return Identifier, that can differ from parameter name, if it clash with
-     *         Java reserved words. Can not be empty
+     * Encodes a given byte array, according to some custom algorithm (specific
+     * to implementing class) and parameters given in the constructor, returning
+     * another byte array.
+     * <p>
+     * This method is used in serialization. The inverse operation is
+     * {@link #decode(byte[])}, which must return the same byte array as
+     * {@code src} when given the encoded byte array returned by this method.
+     * @param src source byte array
+     * @return encoded byte array
      */
-    String id();
-    /**
-     * Index of a parameter in sequence of parameters in the type.
-     *
-     * @return 0-based index of a parameter in {@code params} KSY element
-     */
-    int index();
-    /**
-     * Documentation string attached to the parameter, specified in {@code doc}
-     * KSY element.
-     *
-     * @return Documentation string for parameter. If documentation is missed,
-     *         returns empty string
-     */
-    String doc();
+    byte[] encode(byte[] src);
 }

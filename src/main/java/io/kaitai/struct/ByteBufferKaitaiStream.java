@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2022 Kaitai Project: MIT license
+ * Copyright 2015-2023 Kaitai Project: MIT license
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -46,8 +46,8 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     private ByteBuffer bb;
 
     /**
-     * Initializes a stream, reading from a local file with specified fileName.
-     * Internally, FileChannel + MappedByteBuffer will be used.
+     * Initializes a stream, reading from a local file with specified {@code fileName}.
+     * Internally, {@link FileChannel} + {@link MappedByteBuffer} will be used.
      * @param fileName file to read
      * @throws IOException if file can't be read
      */
@@ -57,9 +57,10 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     /**
-     * Initializes a stream that will get data from given byte array when read.
-     * Internally, ByteBuffer wrapping given array will be used.
-     * @param arr byte array to read
+     * Initializes a stream that will get data from the given array on read and put data
+     * into the array on write. Internally, a {@link ByteBuffer} is used to wrap the given
+     * array.
+     * @param arr byte array to read from or write to
      */
     public ByteBufferKaitaiStream(byte[] arr) {
         fc = null;
@@ -67,12 +68,25 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     /**
-     * Initializes a stream that will get data from given ByteBuffer when read.
-     * @param buffer ByteBuffer to read
+     * Initializes a stream that will get data from given {@link ByteBuffer} on read and
+     * put data into it on write.
+     * @param buffer {@link ByteBuffer} to read from or write to
      */
     public ByteBufferKaitaiStream(ByteBuffer buffer) {
         fc = null;
         bb = buffer;
+    }
+
+    /**
+     * Initializes a stream that will write data into a fixed byte buffer in memory.
+     * @param size size of buffer in bytes
+     */
+    public ByteBufferKaitaiStream(long size) {
+        if (size > Integer.MAX_VALUE) {
+            throw new RuntimeException("Java ByteBuffer can't be longer than Integer.MAX_VALUE");
+        }
+        fc = null;
+        bb = ByteBuffer.allocate((int) size);
     }
 
     /**
@@ -101,18 +115,32 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * @return read-only {@link ByteBuffer} to access raw data for the associated type.
      */
     public ByteBuffer asRoBuffer() {
-        ByteBuffer retVal = this.bb.asReadOnlyBuffer();
+        ByteBuffer retVal = bb.asReadOnlyBuffer();
         retVal.rewind();
 
         return retVal;
     }
 
     /**
-     * Closes the stream safely. If there was an open file associated with it, closes that file.
-     * For streams that were reading from in-memory array, does nothing.
+     * Closes the stream safely, writing the buffered bits to the underlying byte stream
+     * first (if applicable). If there was an open file associated with the stream, closes
+     * that file.
+     * <p>
+     * If the last read/write/seek operation in the stream was {@link #writeBitsIntBe(int, long)} or
+     * {@link #writeBitsIntLe(int, long)} and the stream ended at an unaligned bit
+     * position (i.e. not at a byte boundary), writes a final byte with buffered bits to
+     * the underlying stream before closing the stream.
+     * </p>
+     * <p>
+     * Regardless of whether the closure is successful or not, always relinquishes the
+     * underlying resources. In accordance with {@link java.io.Closeable#close()},
+     * subsequent calls have no effect. Once this method has been called, read and write
+     * operations, seeking or accessing the state using {@link #pos()}, {@link #size()} or
+     * {@link #isEof()} on this stream will typically throw a {@link NullPointerException}.
+     * </p>
      * @implNote
      * <p>
-     * Unfortunately, there is no simple way to close memory-mapped ByteBuffer in
+     * Unfortunately, there is no simple way to close memory-mapped {@link ByteBuffer} in
      * Java and unmap underlying file. As {@link MappedByteBuffer} documentation suggests,
      * "mapped byte buffer and the file mapping that it represents remain valid until the
      * buffer itself is garbage-collected". Thus, the best we can do is to delete all
@@ -133,28 +161,52 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * </p>
      * <p>
      * For more examples and suggestions, see:
-     * <a href="https://stackoverflow.com/q/2972986">How to unmap a file from memory mapped using FileChannel in java?</a>
+     * <a href="https://stackoverflow.com/q/2972986">How to unmap a file from memory
+     * mapped using FileChannel in java?</a>
      * </p>
-     * @throws IOException if FileChannel can't be closed
+     * @throws IOException if {@link FileChannel} can't be closed
      */
     @Override
     public void close() throws IOException {
-        if (fc != null) {
-            fc.close();
-            fc = null;
+        Exception exc = null;
+        try {
+            if (bitsWriteMode) {
+                writeAlignToByte();
+            }
+        } catch (Exception e) {
+            exc = e;
+            throw e;
+        } finally {
+            bb = null;
+            if (fc != null) try {
+                fc.close();
+            } catch (IOException e) {
+                if (exc != null) {
+                    // deliver FileChannel.close() exception as primary, the one from
+                    // writeAlignToByte() as suppressed
+                    e.addSuppressed(exc);
+                }
+                throw e;
+            } finally {
+                fc = null;
+            }
         }
-        bb = null;
     }
 
     //region Stream positioning
 
     @Override
     public boolean isEof() {
-        return !(bb.hasRemaining() || bitsLeft > 0);
+        return !(bb.hasRemaining() || (!bitsWriteMode && bitsLeft > 0));
     }
 
     @Override
     public void seek(int newPos) {
+        if (bitsWriteMode) {
+            writeAlignToByte();
+        } else {
+            alignToByte();
+        }
         bb.position(newPos);
     }
 
@@ -163,12 +215,12 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
         if (newPos > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Java ByteBuffer can't be seeked past Integer.MAX_VALUE");
         }
-        bb.position((int) newPos);
+        seek((int) newPos);
     }
 
     @Override
     public int pos() {
-        return bb.position();
+        return bb.position() + ((bitsWriteMode && bitsLeft > 0) ? 1 : 0);
     }
 
     @Override
@@ -177,6 +229,8 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
     }
 
     //endregion
+
+    //region Reading
 
     //region Integer numbers
 
@@ -188,6 +242,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public byte readS1() {
+        alignToByte();
         return bb.get();
     }
 
@@ -195,18 +250,21 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public short readS2be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getShort();
     }
 
     @Override
     public int readS4be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getInt();
     }
 
     @Override
     public long readS8be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getLong();
     }
@@ -217,18 +275,21 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public short readS2le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getShort();
     }
 
     @Override
     public int readS4le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getInt();
     }
 
     @Override
     public long readS8le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getLong();
     }
@@ -241,6 +302,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU1() {
+        alignToByte();
         return bb.get() & 0xff;
     }
 
@@ -248,12 +310,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU2be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getShort() & 0xffff;
     }
 
     @Override
     public long readU4be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getInt() & 0xffffffffL;
     }
@@ -264,12 +328,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public int readU2le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getShort() & 0xffff;
     }
 
     @Override
     public long readU4le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getInt() & 0xffffffffL;
     }
@@ -286,12 +352,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public float readF4be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getFloat();
     }
 
     @Override
     public double readF8be() {
+        alignToByte();
         bb.order(ByteOrder.BIG_ENDIAN);
         return bb.getDouble();
     }
@@ -302,12 +370,14 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public float readF4le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getFloat();
     }
 
     @Override
     public double readF8le() {
+        alignToByte();
         bb.order(ByteOrder.LITTLE_ENDIAN);
         return bb.getDouble();
     }
@@ -318,13 +388,8 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     //region Byte arrays
 
-    /**
-     * Reads designated number of bytes from the stream.
-     * @param n number of bytes to read
-     * @return read bytes as byte array
-     */
     @Override
-    public byte[] readBytes(long n) {
+    protected byte[] readBytesNotAligned(long n) {
         byte[] buf = new byte[toByteArrayLength(n)];
         bb.get(buf);
         return buf;
@@ -336,6 +401,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      */
     @Override
     public byte[] readBytesFull() {
+        alignToByte();
         byte[] buf = new byte[bb.remaining()];
         bb.get(buf);
         return buf;
@@ -343,6 +409,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+        alignToByte();
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         while (true) {
             if (!bb.hasRemaining()) {
@@ -379,4 +446,125 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
         return new ByteBufferKaitaiStream(newBuffer);
     }
+    //endregion
+
+    //region Writing
+
+    //region Integer numbers
+
+    //region Signed
+
+    /**
+     * Writes one signed 1-byte integer.
+     */
+    @Override
+    public void writeS1(byte v) {
+        writeAlignToByte();
+        bb.put(v);
+    }
+
+    //region Big-endian
+
+    @Override
+    public void writeS2be(short v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putShort(v);
+    }
+
+    @Override
+    public void writeS4be(int v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putInt(v);
+    }
+
+    @Override
+    public void writeS8be(long v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putLong(v);
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    @Override
+    public void writeS2le(short v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putShort(v);
+    }
+
+    @Override
+    public void writeS4le(int v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putInt(v);
+    }
+
+    @Override
+    public void writeS8le(long v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putLong(v);
+    }
+
+    //endregion
+
+    //endregion
+
+    //endregion
+
+    //region Floating point numbers
+
+    //region Big-endian
+
+    @Override
+    public void writeF4be(float v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putFloat(v);
+    }
+
+    @Override
+    public void writeF8be(double v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putDouble(v);
+    }
+
+    //endregion
+
+    //region Little-endian
+
+    @Override
+    public void writeF4le(float v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putFloat(v);
+    }
+
+    @Override
+    public void writeF8le(double v) {
+        writeAlignToByte();
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putDouble(v);
+    }
+
+    //endregion
+
+    //endregion
+
+    //region Byte arrays
+
+    @Override
+    protected void writeBytesNotAligned(byte[] buf) {
+        bb.put(buf);
+    }
+
+    //endregion
+
+    //endregion
 }
