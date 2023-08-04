@@ -133,7 +133,8 @@
                 <moduleInfo>
                   <name>io.kaitai.struct</name>
                   <exports>
-                    *;
+                    io.kaitai.struct;
+                    io.kaitai.struct.annotations;
                   </exports>
                 </moduleInfo>
               </module>
