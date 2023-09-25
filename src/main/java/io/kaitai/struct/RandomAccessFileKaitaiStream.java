@@ -60,12 +60,13 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
         try {
             if (bitsWriteMode) {
                 writeAlignToByte();
+            } else {
+                alignToByte();
             }
         } catch (Exception e) {
             exc = e;
             throw e;
         } finally {
-            alignToByte();
             try {
                 raf.close();
             } catch (IOException e) {

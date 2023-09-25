@@ -172,6 +172,8 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
         try {
             if (bitsWriteMode) {
                 writeAlignToByte();
+            } else {
+                alignToByte();
             }
         } catch (Exception e) {
             exc = e;
