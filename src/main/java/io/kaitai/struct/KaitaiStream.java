@@ -1005,7 +1005,7 @@ public abstract class KaitaiStream implements Closeable {
      */
     public static class ValidationFailedError extends KaitaiStructError {
         public ValidationFailedError(String msg, KaitaiStream io, String srcPath) {
-            super("at pos " + io.pos() + ": validation failed: " + msg, srcPath);
+            super((io != null ? "at pos " + io.pos() + ": " : "") + "validation failed: " + msg, srcPath);
             this.io = io;
         }
 
