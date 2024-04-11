@@ -381,10 +381,7 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     protected byte[] readBytesNotAligned(long n) {
         byte[] buf = new byte[toByteArrayLength(n)];
         try {
-            int readCount = raf.read(buf);
-            if (readCount < n) {
-                throw new EOFException();
-            }
+            raf.readFully(buf);
             return buf;
         } catch (IOException e) {
             throw new RuntimeException(e);
