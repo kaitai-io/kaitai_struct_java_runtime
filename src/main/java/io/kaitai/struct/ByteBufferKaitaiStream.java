@@ -31,6 +31,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 
 /**
  * An implementation of {@link KaitaiStream} backed by a {@link ByteBuffer}.
@@ -417,9 +418,8 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
             if (!bb.hasRemaining()) {
                 if (eosError) {
                     throw new RuntimeException("End of stream reached, but no terminator " + term + " found");
-                } else {
-                    return buf.toByteArray();
                 }
+                return buf.toByteArray();
             }
             byte c = bb.get();
             if (c == term) {
@@ -430,6 +430,37 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
                 return buf.toByteArray();
             }
             buf.write(c);
+        }
+    }
+
+    @Override
+    public byte[] readBytesTermMulti(byte[] term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+        alignToByte();
+        int unitSize = term.length;
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        byte[] c = new byte[unitSize];
+        while (true) {
+            int restSize = bb.remaining();
+            if (restSize < unitSize) {
+                if (eosError) {
+                    throw new RuntimeException("End of stream reached, but no terminator " + byteArrayToHex(term) + " found");
+                }
+                bb.get(c, 0, restSize);
+                buf.write(c, 0, restSize);
+                return buf.toByteArray();
+            }
+            bb.get(c);
+            if (Arrays.equals(c, term)) {
+                if (includeTerm)
+                    buf.write(c, 0, c.length); // see the comment about `buf.write(c)` below
+                if (!consumeTerm)
+                    bb.position(bb.position() - unitSize);
+                return buf.toByteArray();
+            }
+            // we could also just use `buf.write(c)`, but then Java thinks that it could throw
+            // `IOException` when it really can't (Java 11 adds `ByteArrayOutputStream.writeBytes`
+            // for this reason, but we still want to support Java 7+)
+            buf.write(c, 0, c.length);
         }
     }
 

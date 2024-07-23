@@ -27,6 +27,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Arrays;
 
 /**
  * An implementation of {@link KaitaiStream} backed by a {@link RandomAccessFile}.
@@ -410,17 +411,17 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     @Override
     public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
         alignToByte();
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
         try {
-            ByteArrayOutputStream buf = new ByteArrayOutputStream();
             while (true) {
                 int c = raf.read();
                 if (c < 0) {
                     if (eosError) {
                         throw new RuntimeException("End of stream reached, but no terminator " + term + " found");
-                    } else {
-                        return buf.toByteArray();
                     }
-                } else if ((byte) c == term) {
+                    return buf.toByteArray();
+                }
+                if ((byte) c == term) {
                     if (includeTerm)
                         buf.write(c);
                     if (!consumeTerm)
@@ -428,6 +429,49 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
                     return buf.toByteArray();
                 }
                 buf.write(c);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public byte[] readBytesTermMulti(byte[] term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+        alignToByte();
+        int unitSize = term.length;
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        byte[] c = new byte[unitSize];
+        try {
+            int readCount = 0;
+            while (true) {
+                // Inspired by the [Java implementation of
+                // `RandomAccessFile.readFully`](https://github.com/openjdk/jdk/blob/2f2223d7524c/src/java.base/share/classes/java/io/RandomAccessFile.java#L539-L547)
+                // (we want something like readFully() here in the sense that we'd like to read all
+                // `unitSize` bytes if available, but we don't want to throw an EOF exception)
+                int count = raf.read(c, readCount, unitSize - readCount);
+                if (count >= 0) {
+                    readCount += count;
+                    if (readCount < unitSize) {
+                        // we have received some bytes, but we need `unitSize` bytes, so we'll
+                        // continue reading
+                        continue;
+                    }
+                } else {
+                    if (eosError) {
+                        throw new RuntimeException("End of stream reached, but no terminator " + byteArrayToHex(term) + " found");
+                    }
+                    buf.write(c, 0, readCount);
+                    return buf.toByteArray();
+                }
+                if (Arrays.equals(c, term)) {
+                    if (includeTerm)
+                        buf.write(c, 0, c.length); // see the comment about `buf.write(c)` in `ByteBufferKaitaiStream.readBytesTermMulti`
+                    if (!consumeTerm)
+                        raf.seek(raf.getFilePointer() - unitSize);
+                    return buf.toByteArray();
+                }
+                buf.write(c, 0, c.length); // see the comment about `buf.write(c)` in `ByteBufferKaitaiStream.readBytesTermMulti`
+                readCount = 0;
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

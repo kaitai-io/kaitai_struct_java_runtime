@@ -313,6 +313,8 @@ public abstract class KaitaiStream implements Closeable {
 
     abstract public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError);
 
+    abstract public byte[] readBytesTermMulti(byte[] term, boolean includeTerm, boolean consumeTerm, boolean eosError);
+
     /**
      * Checks that next bytes in the stream match match expected fixed byte array.
      * It does so by determining number of bytes to compare, reading them, and doing
@@ -346,6 +348,19 @@ public abstract class KaitaiStream implements Closeable {
         if (includeTerm && newLen < maxLen)
             newLen++;
         return Arrays.copyOf(bytes, newLen);
+    }
+
+    public static byte[] bytesTerminateMulti(byte[] bytes, byte[] term, boolean includeTerm) {
+        int unitSize = term.length;
+        outerLoop: for (int i = 0; i < bytes.length; i += unitSize) {
+            for (int j = 0; j < unitSize; j++) {
+                if (bytes[i + j] != term[j]) {
+                    continue outerLoop;
+                }
+            }
+            return Arrays.copyOf(bytes, i + (includeTerm ? unitSize : 0));
+        }
+        return Arrays.copyOf(bytes, bytes.length);
     }
 
     /**
