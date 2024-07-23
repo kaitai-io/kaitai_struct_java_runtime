@@ -899,6 +899,17 @@ public abstract class KaitaiStream implements Closeable {
         return -1;
     }
 
+    static String byteArrayToHex(byte[] arr) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < arr.length; i++) {
+            if (i > 0)
+                sb.append(' ');
+            sb.append(String.format("%02x", arr[i]));
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
     //endregion
 
     public byte[] toByteArray() {
@@ -1010,17 +1021,6 @@ public abstract class KaitaiStream implements Closeable {
         }
 
         protected KaitaiStream io;
-
-        protected static String byteArrayToHex(byte[] arr) {
-            StringBuilder sb = new StringBuilder("[");
-            for (int i = 0; i < arr.length; i++) {
-                if (i > 0)
-                    sb.append(' ');
-                sb.append(String.format("%02x", arr[i]));
-            }
-            sb.append(']');
-            return sb.toString();
-        }
     }
 
     /**
