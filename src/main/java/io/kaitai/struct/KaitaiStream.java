@@ -352,7 +352,8 @@ public abstract class KaitaiStream implements Closeable {
 
     public static byte[] bytesTerminateMulti(byte[] bytes, byte[] term, boolean includeTerm) {
         int unitSize = term.length;
-        outerLoop: for (int i = 0; i < bytes.length; i += unitSize) {
+        int lastUnitStart = bytes.length - unitSize;
+        outerLoop: for (int i = 0; i <= lastUnitStart; i += unitSize) {
             for (int j = 0; j < unitSize; j++) {
                 if (bytes[i + j] != term[j]) {
                     continue outerLoop;
