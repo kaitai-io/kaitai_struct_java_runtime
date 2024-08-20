@@ -13,3 +13,16 @@ Further reading:
 * [About Kaitai Struct](http://kaitai.io/)
 * [About API implemented in this library](http://doc.kaitai.io/stream_api.html)
 * [Java-specific notes](http://doc.kaitai.io/lang_java.html)
+
+## Build
+To build the library, run the following command:
+
+```sh
+mvn install
+```
+
+## Release
+<sub>
+If you are maintainer of this project please visit http://doc.kaitai.io/developers.html#java
+to get instructions how to make a release.
+</sub>
