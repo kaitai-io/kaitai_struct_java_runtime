@@ -35,9 +35,9 @@ import java.util.Arrays;
 
 /**
  * An implementation of {@link KaitaiStream} backed by a {@link ByteBuffer}.
- * Any underlying implementation of ByteBuffer can be used, for example:
+ * Any underlying implementation of {@link ByteBuffer} can be used, for example:
  * <ul>
- *     <li>ByteBuffer returned as result of {@link ByteBuffer#wrap}, wrapping
+ *     <li>{@link ByteBuffer} returned as result of {@link ByteBuffer#wrap}, wrapping
  *         a byte array into a buffer.</li>
  *     <li>{@link MappedByteBuffer} backed by {@link FileChannel}</li>
  * </ul>
@@ -94,7 +94,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * Provide a read-only version of the {@link ByteBuffer} backing the data of this instance.
      * <p>
      * This way one can access the underlying raw bytes associated with this structure, but it is
-     * important to note that the caller needs to know what this raw data is: Depending on the
+     * important to note that the caller needs to know what this raw data is: depending on the
      * hierarchy of user types, how the format has been described and how a user type is actually
      * used, it might be that one accesses all data of some format or only a special substream
      * view of it. We can't know currently, so one needs to keep that in mind when authoring a KSY
@@ -107,7 +107,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * actually interested in.
      * </p>
      * <p>
-     * The returned {@link ByteBuffer} is always rewinded to position 0, because this stream was
+     * The returned {@link ByteBuffer} is always rewound to position 0, because this stream was
      * most likely used to parse a type already, in which case the former position would have been
      * at the end of the buffer. Such a position doesn't help a common reading user much and that
      * fact can easily be forgotten, repositioning to another index than the start is pretty easy
@@ -150,9 +150,9 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
      * typically release the mmap, if garbage collection will be triggered.
      * </p>
      * <p>
-     * There is a <a href="https://bugs.java.com/bugdatabase/view_bug.do?bug_id=4724038">
-     * JDK-4724038 request for adding unmap method</a> filed at Java bugtracker since 2002,
-     * but as of 2018, it is still unresolved.
+     * There is a <a href="https://bugs.openjdk.org/browse/JDK-4724038">JDK-4724038 request
+     * for adding unmap method</a> filed at Java bugtracker since 2002, but as of 2018, it
+     * is still unresolved.
      * </p>
      * <p>
      * A couple of unsafe approaches (such as using JNI, or using reflection to invoke JVM
