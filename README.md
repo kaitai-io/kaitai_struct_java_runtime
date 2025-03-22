@@ -1,6 +1,6 @@
 # Kaitai Struct: runtime library for Java
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.kaitai/kaitai-struct-runtime)](https://search.maven.org/artifact/io.kaitai/kaitai-struct-runtime)
+[![Maven Central](https://img.shields.io/maven-central/v/io.kaitai/kaitai-struct-runtime)](https://central.sonatype.com/artifact/io.kaitai/kaitai-struct-runtime)
 
 This library implements Kaitai Struct API for Java.
 
