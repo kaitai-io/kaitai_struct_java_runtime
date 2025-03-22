@@ -10,6 +10,6 @@ formats, network stream packet formats, etc.
 
 Further reading:
 
-* [About Kaitai Struct](http://kaitai.io/)
-* [About API implemented in this library](http://doc.kaitai.io/stream_api.html)
-* [Java-specific notes](http://doc.kaitai.io/lang_java.html)
+* [About Kaitai Struct](https://kaitai.io/)
+* [About API implemented in this library](https://doc.kaitai.io/stream_api.html)
+* [Java-specific notes](https://doc.kaitai.io/lang_java.html)

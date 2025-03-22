@@ -745,7 +745,7 @@ public abstract class KaitaiStream implements Closeable {
             case 1:
                 for (int i = 0; i < data.length; i++) {
                     byte bits = data[i];
-                    // http://stackoverflow.com/a/19181827/487064
+                    // https://stackoverflow.com/a/19181827/487064
                     r[i] = (byte) (((bits & 0xff) << amount) | ((bits & 0xff) >>> (8 - amount)));
                 }
                 break;
