@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
+
+jobs:
+  build-test-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '24'
+
+      - name: Configure Maven settings
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "central",
+              "username": "${{ secrets.CENTRAL_SONATYPE_USERNAME }}",
+              "password": "${{ secrets.CENTRAL_SONATYPE_PASSWORD }}"
+            }]
+
+      - name: Import GPG key
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_TEST_PRIV_KEY }}
+          passphrase: ${{ secrets.GPG_TEST_PASSPHRASE }}
+
+      - name: Build
+        run: mvn --batch-mode clean compile
+
+      - name: Test
+        run: mvn --batch-mode test
+
+      - name: Package without gpg
+        if: github.event_name != 'push' || github.ref != 'refs/heads/master'
+        run: mvn --batch-mode package -Dmaven.test.skip=true -Dgpg.skip=true
+
+      - name: Deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: mvn --batch-mode deploy
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-runtime-${{ github.event_name }}-${{ github.event.number || github.sha }}
+          path: target/*.jar
+          retention-days: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 30 || 7 }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.event_name }}-${{ github.event.number || github.sha }}
+          path: target/surefire-reports/
+          retention-days: 7
