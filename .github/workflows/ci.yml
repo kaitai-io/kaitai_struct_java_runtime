@@ -44,6 +44,9 @@ jobs:
       - name: Test
         run: mvn --batch-mode test
 
+      - name: Build javadoc
+        run: mvn --batch-mode javadoc:javadoc
+
       - name: Package without gpg
         if: github.event_name != 'push' || github.ref != 'refs/heads/master'
         run: mvn --batch-mode package -Dmaven.test.skip=true -Dgpg.skip=true
