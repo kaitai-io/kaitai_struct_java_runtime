@@ -58,6 +58,13 @@ public class KaitaiStruct {
      * shortcut methods.
      */
     public abstract static class ReadWrite extends ReadOnly {
+        /**
+         * Indicates whether the object has been externally modified since the
+         * last known consistent state, meaning that the consistency of the
+         * object is unknown because it hasn't been checked.
+         */
+        protected boolean _dirty = true;
+
         public ReadWrite(KaitaiStream _io) {
             super(_io);
         }
@@ -79,6 +86,12 @@ public class KaitaiStruct {
         public void _write_Seq(KaitaiStream io) {
             this._io = io;
             _write_Seq();
+        }
+
+        protected void _assertNotDirty() {
+            if (_dirty) {
+                throw new ConsistencyNotCheckedError("consistency not checked: _check() has not been called since the last modification of the object");
+            }
         }
     }
 }
