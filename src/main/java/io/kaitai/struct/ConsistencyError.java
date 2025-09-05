@@ -39,10 +39,4 @@ public class ConsistencyError extends RuntimeException {
     public String id() { return id; }
     public Object actual() { return actual; }
     public Object expected() { return expected; }
-
-    public static class SizeMismatch extends ConsistencyError {
-        public SizeMismatch(String id, long actual, long expected) {
-            super(id, actual, expected);
-        }
-    }
 }
