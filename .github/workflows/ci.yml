@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '24'
+          java-version: '21'
 
       - name: Configure Maven settings
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
