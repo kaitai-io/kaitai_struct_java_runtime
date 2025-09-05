@@ -35,6 +35,9 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_TEST_PRIV_KEY }}
           passphrase: ${{ secrets.GPG_TEST_PASSPHRASE }}
 
+      - name: Download dependencies
+        run: mvn --batch-mode dependency:go-offline
+
       - name: Build
         run: mvn --batch-mode clean compile
 
