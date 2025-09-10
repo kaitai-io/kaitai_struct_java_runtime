@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - '*'
   pull_request: {}
 
 jobs:
@@ -17,8 +19,16 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Get version from POM
+        id: version
+        if: github.event_name == 'push'
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_snapshot=$(echo $VERSION | grep -q SNAPSHOT && echo true || echo false)" >>$GITHUB_OUTPUT
+
       - name: Configure Maven settings
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.event_name == 'push'
         uses: s4u/maven-settings-action@v3.0.0
         with:
           servers: |
@@ -28,12 +38,19 @@ jobs:
               "password": "${{ secrets.CENTRAL_SONATYPE_PASSWORD }}"
             }]
 
-      - name: Import GPG key
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      - name: Import GPG key for SNAPSHOT
+        if: github.event_name == 'push' && steps.version.outputs.is_snapshot == 'true'
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_TEST_PRIV_KEY }}
           passphrase: ${{ secrets.GPG_TEST_PASSPHRASE }}
+
+      - name: Import GPG key for release
+        if: github.event_name == 'push' && steps.version.outputs.is_snapshot != 'true' && startsWith(github.ref, 'refs/tags/')
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_RELEASE_PRIV_KEY }}
+          passphrase: ${{ secrets.GPG_RELEASE_PASSPHRASE }}
 
       - name: Download dependencies
         run: mvn --batch-mode dependency:go-offline
@@ -48,11 +65,16 @@ jobs:
         run: mvn --batch-mode javadoc:javadoc
 
       - name: Package without gpg
-        if: github.event_name != 'push' || github.ref != 'refs/heads/master'
+        if: github.event_name != 'push'
         run: mvn --batch-mode package -Dmaven.test.skip=true -Dgpg.skip=true
 
-      - name: Deploy
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      # Both "Deploy..." steps are calling the same, but separated to have clearer logs
+      - name: Deploy SNAPSHOT
+        if: github.event_name == 'push' && steps.version.outputs.is_snapshot == 'true'
+        run: mvn --batch-mode deploy
+
+      - name: Deploy release
+        if: github.event_name == 'push' && steps.version.outputs.is_snapshot != 'true' && startsWith(github.ref, 'refs/tags/')
         run: mvn --batch-mode deploy
 
       - name: Upload build artifacts
@@ -60,7 +82,7 @@ jobs:
         with:
           name: java-runtime-${{ github.event_name }}-${{ github.event.number || github.sha }}
           path: target/*.jar
-          retention-days: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 30 || 7 }}
+          retention-days: 30
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
