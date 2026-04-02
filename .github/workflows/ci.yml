@@ -24,8 +24,8 @@ jobs:
         if: github.event_name == 'push'
         run: |
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "is_snapshot=$(echo $VERSION | grep -q SNAPSHOT && echo true || echo false)" >>$GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_snapshot=$(echo "$VERSION" | grep -q SNAPSHOT && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
       - name: Configure Maven settings
         if: github.event_name == 'push'
