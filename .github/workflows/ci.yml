@@ -14,7 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -27,30 +28,29 @@ jobs:
           echo "version=$VERSION" | tee -a "$GITHUB_OUTPUT"
           echo "is_snapshot=$(echo "$VERSION" | grep -q SNAPSHOT && echo true || echo false)" | tee -a "$GITHUB_OUTPUT"
 
-      - name: Configure Maven settings
-        if: github.event_name == 'push'
-        uses: s4u/maven-settings-action@v3.0.0
+      - name: Set up Maven Central credentials for SNAPSHOT
+        uses: actions/setup-java@v4
         with:
-          servers: |
-            [{
-              "id": "central",
-              "username": "${{ secrets.CENTRAL_SONATYPE_USERNAME }}",
-              "password": "${{ secrets.CENTRAL_SONATYPE_PASSWORD }}"
-            }]
-
-      - name: Import GPG key for SNAPSHOT
+          distribution: 'temurin'
+          java-version: '21'
+          server-id: central
+          server-username: CENTRAL_SONATYPE_USERNAME
+          server-password: CENTRAL_SONATYPE_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_TEST_PRIV_KEY }}
+          gpg-passphrase: GPG_TEST_PASSPHRASE
         if: github.event_name == 'push' && steps.version.outputs.is_snapshot == 'true'
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_TEST_PRIV_KEY }}
-          passphrase: ${{ secrets.GPG_TEST_PASSPHRASE }}
 
-      - name: Import GPG key for release
-        if: github.event_name == 'push' && steps.version.outputs.is_snapshot != 'true' && startsWith(github.ref, 'refs/tags/')
-        uses: crazy-max/ghaction-import-gpg@v6
+      - name: Set up Maven Central credentials for release
+        uses: actions/setup-java@v4
         with:
-          gpg_private_key: ${{ secrets.GPG_RELEASE_PRIV_KEY }}
-          passphrase: ${{ secrets.GPG_RELEASE_PASSPHRASE }}
+          distribution: 'temurin'
+          java-version: '21'
+          server-id: central
+          server-username: CENTRAL_SONATYPE_USERNAME
+          server-password: CENTRAL_SONATYPE_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_RELEASE_PRIV_KEY }}
+          gpg-passphrase: GPG_RELEASE_PASSPHRASE
+        if: github.event_name == 'push' && steps.version.outputs.is_snapshot != 'true' && startsWith(github.ref, 'refs/tags/')
 
       - name: Download dependencies
         run: mvn --batch-mode dependency:go-offline
@@ -72,10 +72,18 @@ jobs:
       - name: Deploy SNAPSHOT
         if: github.event_name == 'push' && steps.version.outputs.is_snapshot == 'true'
         run: mvn --batch-mode deploy
+        env:
+          CENTRAL_SONATYPE_USERNAME: ${{ secrets.CENTRAL_SONATYPE_USERNAME }}
+          CENTRAL_SONATYPE_PASSWORD: ${{ secrets.CENTRAL_SONATYPE_PASSWORD }}
+          GPG_TEST_PASSPHRASE: ${{ secrets.GPG_TEST_PASSPHRASE }}
 
       - name: Deploy release
         if: github.event_name == 'push' && steps.version.outputs.is_snapshot != 'true' && startsWith(github.ref, 'refs/tags/')
         run: mvn --batch-mode deploy
+        env:
+          CENTRAL_SONATYPE_USERNAME: ${{ secrets.CENTRAL_SONATYPE_USERNAME }}
+          CENTRAL_SONATYPE_PASSWORD: ${{ secrets.CENTRAL_SONATYPE_PASSWORD }}
+          GPG_RELEASE_PASSPHRASE: ${{ secrets.GPG_RELEASE_PASSPHRASE }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
