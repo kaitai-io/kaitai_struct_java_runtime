@@ -468,6 +468,7 @@ public class ByteBufferKaitaiStream extends KaitaiStream {
 
     @Override
     public KaitaiStream substream(long n) {
+        alignToByte();
         if (n > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Java ByteBuffer can't be limited beyond Integer.MAX_VALUE");
         }
