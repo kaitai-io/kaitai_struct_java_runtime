@@ -38,7 +38,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '25'
-          server-id: central
+          server-id: sonatype-central
           server-username: CENTRAL_SONATYPE_USERNAME
           server-password: CENTRAL_SONATYPE_PASSWORD
           gpg-private-key: ${{ secrets.GPG_TEST_PRIV_KEY }}
@@ -50,7 +50,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '25'
-          server-id: central
+          server-id: sonatype-central
           server-username: CENTRAL_SONATYPE_USERNAME
           server-password: CENTRAL_SONATYPE_PASSWORD
           gpg-private-key: ${{ secrets.GPG_RELEASE_PRIV_KEY }}
