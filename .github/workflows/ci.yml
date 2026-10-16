@@ -39,10 +39,10 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           server-id: sonatype-central
-          server-username: CENTRAL_SONATYPE_USERNAME
-          server-password: CENTRAL_SONATYPE_PASSWORD
+          server-username-env-var: CENTRAL_SONATYPE_USERNAME
+          server-password-env-var: CENTRAL_SONATYPE_PASSWORD
           gpg-private-key: ${{ secrets.GPG_TEST_PRIV_KEY }}
-          gpg-passphrase: GPG_TEST_PASSPHRASE
+          gpg-passphrase-env-var: GPG_TEST_PASSPHRASE
         if: github.event_name == 'push' && steps.version.outputs.is_snapshot == 'true'
 
       - name: Set up Maven Central credentials for release
@@ -51,10 +51,10 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           server-id: sonatype-central
-          server-username: CENTRAL_SONATYPE_USERNAME
-          server-password: CENTRAL_SONATYPE_PASSWORD
+          server-username-env-var: CENTRAL_SONATYPE_USERNAME
+          server-password-env-var: CENTRAL_SONATYPE_PASSWORD
           gpg-private-key: ${{ secrets.GPG_RELEASE_PRIV_KEY }}
-          gpg-passphrase: GPG_RELEASE_PASSPHRASE
+          gpg-passphrase-env-var: GPG_RELEASE_PASSPHRASE
         if: github.event_name == 'push' && steps.version.outputs.is_snapshot != 'true' && startsWith(github.ref, 'refs/tags/')
 
       - name: Download dependencies
