@@ -112,10 +112,9 @@ public class RandomAccessFileKaitaiStream extends KaitaiStream {
     }
 
     @Override
-    public int pos() {
+    public long pos() {
         try {
-            // FIXME cast
-            return (int) raf.getFilePointer() + ((bitsWriteMode && bitsLeft > 0) ? 1 : 0);
+            return raf.getFilePointer() + ((bitsWriteMode && bitsLeft > 0) ? 1L : 0L);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
