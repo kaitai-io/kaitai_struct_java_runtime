@@ -33,8 +33,8 @@
   </developers>
 
   <scm>
-    <connection>scm:git:git://github.com/kaitai-io/kaitai_struct_java_runtime.git</connection>
-    <developerConnection>scm:git:ssh://github.com:kaitai-io/kaitai_struct_java_runtime.git</developerConnection>
+    <connection>scm:git:https://github.com/kaitai-io/kaitai_struct_java_runtime.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/kaitai-io/kaitai_struct_java_runtime.git</developerConnection>
     <url>https://github.com/kaitai-io/kaitai_struct_java_runtime</url>
   </scm>
 
