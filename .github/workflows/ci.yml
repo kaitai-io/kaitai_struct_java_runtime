@@ -57,9 +57,6 @@ jobs:
           gpg-passphrase-env-var: GPG_RELEASE_PASSPHRASE
         if: github.event_name == 'push' && steps.version.outputs.is_snapshot != 'true' && startsWith(github.ref, 'refs/tags/')
 
-      - name: Download dependencies
-        run: mvn --batch-mode dependency:go-offline
-
       - name: Build
         run: mvn --batch-mode clean compile
 
